@@ -194,6 +194,12 @@ def round_half_up(value: float) -> int:
     return math.floor(value + 0.5)
 
 
+def fmt_seconds(value: float) -> str:
+    """Controller layout for WAIT times: width 6, 2 decimals, no leading zero ('   .30')."""
+    text = f"{value:6.2f}"
+    return text.replace(" 0.", "  .", 1) if abs(value) < 1 else text
+
+
 def fmt_number(value: float) -> str:
     if float(value).is_integer():
         return str(int(value))
@@ -468,7 +474,7 @@ class _RoutineTranslator:
                 if options:
                     self.warn(s, f"WaitTime options ignored: {' '.join(a.name or '' for a in options)}")
                 value = self.numeric(seconds)
-                self.emit(f"WAIT {value}" if value.startswith("R[") else f"WAIT {float(value):.2f}(sec)")
+                self.emit(f"WAIT {value}" if value.startswith("R[") else f"WAIT {fmt_seconds(float(value))}(sec)")
             case n.ProcCall():
                 self.call(s)
             case n.Assign():

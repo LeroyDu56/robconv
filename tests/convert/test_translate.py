@@ -135,7 +135,7 @@ def test_unknown_mapping_key_is_rejected(tmp_path):
 
 def test_waits():
     result = run("WaitTime 0.5;\nWaitDI diReady,1;\nWaitUntil diReady=0 AND nCount>2;", "VAR num nCount;")
-    assert tp_lines(result) == ["WAIT 0.50(sec)", "WAIT DI[1]=ON", "WAIT (DI[1]=OFF AND R[1:nCount]>2)"]
+    assert tp_lines(result) == ["WAIT    .50(sec)", "WAIT DI[1]=ON", "WAIT (DI[1]=OFF AND R[1:nCount]>2)"]
 
 
 def test_waittime_on_a_variable_uses_the_register():

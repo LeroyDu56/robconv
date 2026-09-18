@@ -12,7 +12,9 @@ heuristics applied, and every RAPID line that still needs manual work.
 
 Pure Python, **no runtime dependency**. Tested against real controller backups (not published):
 - **ABB side:** RobotWare 7, ~10,000 lines in 24 modules, parsed with zero syntax errors, 365 moves converted.
-- **FANUC side:** the writer reproduces a real R-J3i export **byte for byte**.
+- **FANUC side:** the writer reproduces a real R-J3i export **byte for byte**. The generated
+  programs load without error in ROBOGUIDE, and the controller's own re-export matches robconv's
+  output byte for byte (except the header values the controller computes itself).
 
 ## Quick start
 
@@ -49,7 +51,7 @@ FANUC out, from [tests/fixtures/fanuc/pick_and_place/PICK.LS](tests/fixtures/fan
    5:J P[1] 50% CNT20    ;
    6:L P[2] 200mm/sec FINE    ;
    7:  DO[1]=ON ;
-   8:  WAIT 0.30(sec) ;
+   8:  WAIT    .30(sec) ;
    9:L P[1] 500mm/sec CNT10    ;
 /POS
 P[1]{
@@ -130,9 +132,8 @@ ROBCONV_UPDATE_GOLDEN=1 pytest                     # regenerate expected outputs
 
 ## Roadmap
 
-- Validate the documented `.LS` constructs (cartesian `/POS`, circular motion) on a ROBOGUIDE import.
+- ABB `confdata` → FANUC `CONFIG`, signal types from `EIO.cfg`.
 - `CALL` with arguments (`AR[n]`), `TEST/CASE` → `SELECT`, `TPWrite` → `MESSAGE`.
-- ABB `confdata` → FANUC `CONFIG` for a given pair of robot models.
 
 ## License
 

@@ -72,6 +72,7 @@ class Attributes:
     protect: str = "READ_WRITE"
     file_name: str = ""
     default_group: str = "1,*,*,*,*"
+    local_registers: str | None = None  # "0,0,0" on recent controllers; absent on R-J3i exports
     appl: tuple[str, ...] = ()  # raw /APPL lines, e.g. "  SPOT : TRUE ;"
 
 

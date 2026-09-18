@@ -8,11 +8,13 @@ Layout sources (details in docs/fanuc_ls_format.md):
     (motion letter right after the colon), "%4d:   ;" for an empty line;
     joint /POS block (UF/UT line then J1..J6 on two lines).
 
-  From FANUC documentation / public exports, NOT yet confirmed on this
-  project's files — validate by loading into ROBOGUIDE:
-    cartesian /POS block (CONFIG + X Y Z / W P R), two-line circular motion.
+  CONFIRMED by a ROBOGUIDE round trip (load generated .LS, re-export):
+    cartesian /POS block, two-line circular motion, IF/THEN, FOR, LBL/JMP, WAIT,
+    and the "    ;" terminator of CALL and register assignments.
+    Header fields computed by the controller (PROG_SIZE, MEMORY_SIZE) may be 0.
 """
 
+import re
 from datetime import datetime
 
 from robconv.fanuc.tp import Attributes, CartesianPosition, JointPosition, Motion, Program
@@ -27,12 +29,21 @@ def write_ls(program: Program) -> str:
         if isinstance(line, Motion):
             lines += _motion(number, line)
         else:
-            lines.append(f"{number:4d}:  {line.text} ;" if line.text else f"{number:4d}:   ;")
+            lines.append(f"{number:4d}:  {line.text}{_terminator(line.text)}" if line.text else f"{number:4d}:   ;")
     lines.append("/POS")
     for pos in program.positions:
         lines += _position(pos.number, pos.uf, pos.ut, pos.value)
     lines.append("/END")
     return CRLF.join(lines) + CRLF
+
+
+# The controller pads some instructions before ';' (seen identically on R-J3i and
+# ROBOGUIDE exports): calls and register assignments.
+_PADDED = re.compile(r"^(CALL |R\[[^\]]*\]=)")
+
+
+def _terminator(text: str) -> str:
+    return "    ;" if _PADDED.match(text) else " ;"
 
 
 def _date(value: datetime) -> str:
@@ -63,6 +74,8 @@ def _header(name: str, macro: bool, attrs: Attributes, line_count: int) -> list[
         f"DEFAULT_GROUP\t= {attrs.default_group};",
         "CONTROL_CODE\t= 00000000 00000000;",
     ]
+    if attrs.local_registers is not None:
+        lines.append(f"LOCAL_REGISTERS\t= {attrs.local_registers};")
     if attrs.appl:
         lines.append("/APPL")
         lines += attrs.appl
@@ -74,7 +87,7 @@ def _motion(number: int, m: Motion) -> list[str]:
     if m.kind == "C":
         if m.via is None:
             raise ValueError("circular motion needs a via point")
-        # Documented layout: the end point goes on a continuation line without a number.
+        # The end point goes on a continuation line without a number (confirmed by ROBOGUIDE).
         return [f"{number:4d}:C {m.via}    ", f"    :  {m.target} {tail}"]
     return [f"{number:4d}:{m.kind} {m.target} {tail}"]
 
