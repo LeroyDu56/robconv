@@ -32,7 +32,7 @@ def test_missing_file(tmp_path, capsys):
 def test_stats(fixtures_dir, capsys):
     assert main(["stats", str(fixtures_dir / "rapid")]) == 0
     out = capsys.readouterr().out
-    assert "2 files, 0 errors" in out
+    assert "3 files, 0 errors" in out
     assert "ERROR_HANDLER" in out
 
 
