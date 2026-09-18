@@ -236,6 +236,7 @@ class Converter:
         self.uframes = NumberTable(cfg.uframes, cfg.first_uframe)
         self.utools = NumberTable(cfg.utools, cfg.first_utool)
         self.frames: dict[tuple[str, int], FrameInfo] = {}
+        self.written_registers: set[int] = set()  # assigned or used as FOR variable
         self.result = ConversionResult()
         self._warned: set[str] = set()
         self.do_names, self.di_names = self._signals_by_usage()
@@ -265,6 +266,7 @@ class Converter:
             for missing in sorted(wanted - found):
                 self.note("", None, "TODO", f"routine '{missing}' not found in the given modules")
 
+        self._controller_comments()
         res = self.result
         res.registers = self.registers.allocations()
         res.flags = self.flags.allocations()
@@ -350,6 +352,28 @@ class Converter:
         if self.frames[key].problem.startswith(("robot-held", "stationary")):
             raise Untranslatable(self.frames[key].problem)
         return number
+
+    def _controller_comments(self) -> None:
+        """Keep only the comments the controller keeps when it loads the program.
+
+        Observed on ROBOGUIDE round trips: a register comment is stored only when
+        the register is written (assignment, FOR); flag comments are never stored.
+        Dropping the others makes the output identical to the controller's view.
+        """
+        def register(match: re.Match[str]) -> str:
+            return match[0] if int(match[1]) in self.written_registers else f"R[{match[1]}]"
+
+        for info in self.result.programs:
+            lines = info.program.lines
+            for i, line in enumerate(lines):
+                if isinstance(line, Instruction) and not line.text.startswith("!"):
+                    text = re.sub(r"R\[(\d+):[^\]]*\]", register, line.text)
+                    lines[i] = Instruction(re.sub(r"F\[(\d+):[^\]]*\]", r"F[\1]", text))
+
+    def written_register(self, name: str, key: str | None = None) -> str:
+        text = self.register(name, key)
+        self.written_registers.add(int(text[2 : text.index(":")]))
+        return text
 
     def register(self, name: str, key: str | None = None) -> str:
         decl = self.symbols.get(name)
@@ -499,7 +523,7 @@ class _RoutineTranslator:
         if decl.init is None or decl.dims:
             return
         if decl.type_name.lower() == "num":
-            self.emit(f"{self.c.register(decl.name)}={self.numeric(decl.init)}")
+            self.emit(f"{self.c.written_register(decl.name)}={self.numeric(decl.init)}")
         elif decl.type_name.lower() == "bool" and isinstance(decl.init, n.Bool):
             self.emit(f"{self.c.flag(decl.name)}=({'ON' if decl.init.value else 'OFF'})")
 
@@ -635,7 +659,7 @@ class _RoutineTranslator:
         if a.target.name.upper() in self.loop_vars:
             raise Untranslatable("assignment to a FOR loop variable")
         if type_name == "num":
-            self.emit(f"{self.c.register(a.target.name)}={self.arithmetic(a.value)}")
+            self.emit(f"{self.c.written_register(a.target.name)}={self.arithmetic(a.value)}")
         elif type_name == "bool" and isinstance(a.value, n.Bool):
             self.emit(f"{self.c.flag(a.target.name)}=({'ON' if a.value.value else 'OFF'})")
         else:
@@ -686,7 +710,7 @@ class _RoutineTranslator:
         if step not in (1.0, -1.0):
             raise Untranslatable("FOR with a STEP other than 1 or -1 (TP FOR only counts by 1)")
         key = loop.var.upper()
-        register = self.c.register(loop.var, key=f"{self.name}.{loop.var}")
+        register = self.c.written_register(loop.var, key=f"{self.name}.{loop.var}")
         start, end = self.numeric(loop.start), self.numeric(loop.end)
         self.emit(f"FOR {register}={start} {'TO' if step > 0 else 'DOWNTO'} {end}")
         self.loop_vars[key] = register

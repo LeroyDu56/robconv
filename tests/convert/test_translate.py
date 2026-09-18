@@ -133,13 +133,19 @@ def test_unknown_mapping_key_is_rejected(tmp_path):
         ConversionConfig.from_mapping_file(mapping)
 
 
+def test_comments_follow_controller_rules():
+    # Register comments survive only on registers the programs write; flag comments never.
+    result = run("n:=1;\nIF m=2 AND bOk Stop;", "VAR num n;\nVAR num m;\nVAR bool bOk;")
+    assert tp_lines(result) == ["R[1:n]=1", "IF (R[2]=2 AND F[1]=ON) THEN", "PAUSE", "ENDIF"]
+
+
 def test_waits():
     result = run("WaitTime 0.5;\nWaitDI diReady,1;\nWaitUntil diReady=0 AND nCount>2;", "VAR num nCount;")
-    assert tp_lines(result) == ["WAIT    .50(sec)", "WAIT DI[1]=ON", "WAIT (DI[1]=OFF AND R[1:nCount]>2)"]
+    assert tp_lines(result) == ["WAIT    .50(sec)", "WAIT DI[1]=ON", "WAIT (DI[1]=OFF AND R[1]>2)"]
 
 
 def test_waittime_on_a_variable_uses_the_register():
-    assert tp_lines(run("WaitTime tDelay;", "PERS num tDelay:=2;")) == ["WAIT R[1:tDelay]"]
+    assert tp_lines(run("WaitTime tDelay;", "PERS num tDelay:=2;")) == ["WAIT R[1]"]
 
 
 def test_calls_stop_return_exit():
@@ -161,16 +167,16 @@ def test_call_with_arguments_is_a_todo():
 def test_num_and_bool_data_become_registers_and_flags():
     data = "PERS num nCycles:=0;\nVAR bool bDone:=FALSE;\nCONST num MAX:=3;"
     result = run("nCycles:=nCycles+1;\nnCycles:=MAX*2;\nbDone:=TRUE;", data)
-    assert tp_lines(result) == ["R[1:nCycles]=R[1:nCycles]+1", "R[1:nCycles]=6", "F[1:bDone]=(ON)"]
+    assert tp_lines(result) == ["R[1:nCycles]=R[1:nCycles]+1", "R[1:nCycles]=6", "F[1]=(ON)"]
     assert "initial value 0" in result.registers[0].detail
 
 
 def test_if_elseif_else_is_unrolled_into_nested_ifs():
     result = run("IF n=1 THEN\n  Set doA;\nELSEIF n=2 THEN\n  Set doB;\nELSE\n  Reset doA;\nENDIF", "VAR num n;")
     assert tp_lines(result) == [
-        "IF (R[1:n]=1) THEN", "DO[1]=ON",
+        "IF (R[1]=1) THEN", "DO[1]=ON",
         "ELSE",
-        "IF (R[1:n]=2) THEN", "DO[2]=ON",
+        "IF (R[1]=2) THEN", "DO[2]=ON",
         "ELSE", "DO[1]=OFF",
         "ENDIF",
         "ENDIF",
@@ -179,7 +185,7 @@ def test_if_elseif_else_is_unrolled_into_nested_ifs():
 
 def test_conditions_negation_is_pushed_down():
     result = run("IF NOT (n>2 AND diOk=1) Set doA;", "VAR num n;")
-    assert tp_lines(result)[0] == "IF (R[1:n]<=2 OR DI[1]=OFF) THEN"
+    assert tp_lines(result)[0] == "IF (R[1]<=2 OR DI[1]=OFF) THEN"
 
 
 def test_signal_functions_in_conditions():

@@ -9,7 +9,7 @@ configuration from the joint angles (forward kinematics, no reachability check):
       Re-exporting the program as .LS yields joint set -> CONFIG.
 
   ABB (RobotStudio): CfgProbe.mod runs CalcRobT on each joint set and writes
-      the resulting confdata to HOME:/cfgprobe.txt.
+      the resulting confdata, TCP position and orientation to HOME:/cfgprobe.txt.
 
 Usage:  python tools/make_config_probes.py [output_dir]   (default tests/fixtures/probes)
 """
@@ -63,7 +63,8 @@ def abb_probe() -> str:
     return (
         "MODULE CfgProbe\r\n"
         "    ! robconv - arm configuration probe. Run PROC Probe (no motion):\r\n"
-        "    ! it writes the confdata computed for each joint set to HOME:/cfgprobe.txt\r\n"
+        "    ! it writes the confdata, TCP position and orientation computed for each\r\n"
+        "    ! joint set to HOME:/cfgprobe.txt\r\n"
         f"{labels}\r\n"
         f"    CONST jointtarget JT{{{len(JOINT_SETS)}}}:=[\r\n{rows}];\r\n"
         "\r\n"
@@ -74,6 +75,8 @@ def abb_probe() -> str:
         "        FOR i FROM 1 TO Dim(JT,1) DO\r\n"
         "            p:=CalcRobT(JT{i},tool0\\WObj:=wobj0);\r\n"
         '            Write f, NumToStr(i,0)+" "+ValToStr(p.robconf)+" "+ValToStr(JT{i}.robax);\r\n'
+        '            Write f, NumToStr(i,0)+" trans "+ValToStr(p.trans);\r\n'
+        '            Write f, NumToStr(i,0)+" rot "+ValToStr(p.rot);\r\n'
         "        ENDFOR\r\n"
         "        Close f;\r\n"
         '        TPWrite "cfgprobe.txt written in HOME:";\r\n'

@@ -38,12 +38,24 @@ def write_ls(program: Program) -> str:
 
 
 # The controller pads some instructions before ';' (seen identically on R-J3i and
-# ROBOGUIDE exports): calls and register assignments.
-_PADDED = re.compile(r"^(CALL |R\[[^\]]*\]=)")
+# ROBOGUIDE exports): calls, register assignments and waits on a condition.
+_PADDED = re.compile(r"^(CALL |R\[[^\]]*\]=|WAIT (DI|DO)\[|WAIT \()")
 
 
 def _terminator(text: str) -> str:
     return "    ;" if _PADDED.match(text) else " ;"
+
+
+def _num(value: float, width: int) -> str:
+    """Controller number layout: 3 decimals, no leading zero below 1 ('.500', '-.000'),
+    but an exact zero is written '0.000' (all observed on ROBOGUIDE exports)."""
+    text = f"{value:.3f}"
+    if value != 0:
+        if text.startswith("0."):
+            text = text[1:]
+        elif text.startswith("-0."):
+            text = "-" + text[2:]
+    return text.rjust(width)
 
 
 def _date(value: datetime) -> str:
@@ -95,7 +107,7 @@ def _motion(number: int, m: Motion) -> list[str]:
 def _position(number: int, uf: int, ut: int, value: CartesianPosition | JointPosition) -> list[str]:
     lines = [f"P[{number}]{{", "   GP1:"]
     if isinstance(value, JointPosition):
-        j = [f"J{i}={v:10.3f} deg" for i, v in enumerate(value.joints, start=1)]
+        j = [f"J{i}={_num(v, 10)} deg" for i, v in enumerate(value.joints, start=1)]
         lines += [
             f"\tUF : {uf}, UT : {ut},\t",
             "\t" + ",\t".join(j[:3]) + ",",
@@ -105,8 +117,8 @@ def _position(number: int, uf: int, ut: int, value: CartesianPosition | JointPos
         v = value
         lines += [
             f"\tUF : {uf}, UT : {ut},\t\tCONFIG : '{v.config}',",
-            f"\tX = {v.x:9.3f}  mm,\tY = {v.y:9.3f}  mm,\tZ = {v.z:9.3f}  mm,",
-            f"\tW = {v.w:9.3f} deg,\tP = {v.p:9.3f} deg,\tR = {v.r:9.3f} deg",
+            f"\tX = {_num(v.x, 9)}  mm,\tY = {_num(v.y, 9)}  mm,\tZ = {_num(v.z, 9)}  mm,",
+            f"\tW = {_num(v.w, 9)} deg,\tP = {_num(v.p, 9)} deg,\tR = {_num(v.r, 9)} deg",
         ]
     lines.append("};")
     return lines

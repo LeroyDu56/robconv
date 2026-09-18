@@ -13,7 +13,7 @@ source of truth. Two sources confirm a construct:
   reproduces that export byte for byte. The only exception is the header values the controller
   computes itself (`tests/fanuc/test_roboguide_roundtrip.py`).
 
-**Documented** means taken from FANUC documentation, but not yet used in a validated program.
+Every construct robconv emits has now been validated on a controller.
 
 ## File structure
 
@@ -25,7 +25,9 @@ source of truth. Two sources confirm a construct:
 | `COMMENT` | Routine name, not padded. Recent controllers pad it to 16 on export | ROBOGUIDE (accepted) |
 | `LOCAL_REGISTERS` | Not emitted by default. Recent controllers add `0,0,0` on export | ROBOGUIDE (accepted without it) |
 | Instruction line | `   1:  UFRAME_NUM=0 ;` | Real export + ROBOGUIDE |
-| Padded terminator | `  13:  CALL PLACE    ;`, `  15:  R[3:nCycles]=R[3:nCycles]+1    ;` | Real export + ROBOGUIDE |
+| Padded terminator | `CALL PLACE    ;`, `R[3:nCycles]=R[3:nCycles]+1    ;`, `WAIT DI[1]=ON    ;`, `WAIT (...)    ;` | Real export + ROBOGUIDE |
+| Numbers in `/POS` | 3 decimals, no leading zero below 1 (`.500`, `-.000`), exact zero `0.000` | ROBOGUIDE |
+| Register / flag comments | `R[n:name]` kept only for registers the programs write; flags never commented (the controller keeps comments in its own tables) | ROBOGUIDE |
 | Motion line | `   5:J P[1] 50% CNT20    ;` (motion letter right after `:`) | Real export + ROBOGUIDE |
 | Empty line | `   6:   ;` | Real export |
 | Empty program | `/MN` immediately followed by `/POS` | Real export |
@@ -39,19 +41,19 @@ source of truth. Two sources confirm a construct:
 | Frames | `UFRAME_NUM=1`, `UTOOL_NUM=2` | Real export + ROBOGUIDE |
 | Digital output | `DO[1]=ON` | Real export + ROBOGUIDE |
 | Register | `R[2:nSlot]=R[1:i]`, `R[3:nCycles]=R[3:nCycles]+1` | ROBOGUIDE |
-| Register with `DIV` / `MOD` | `R[1:n]=R[2:a] DIV 2` | Documented |
-| Flag | `F[1:bDone]=(ON)` | Real export |
+| Register with `DIV` / `MOD` | `R[2:nRow]=R[1] DIV 4` | ROBOGUIDE |
+| Flag | `F[1]=(ON)` | Real export + ROBOGUIDE |
 | Remark | `!text` (no parentheses in `.LS`) | Real export + ROBOGUIDE |
 | Label / jump | `LBL[1]`, `JMP LBL[1]` | Real export + ROBOGUIDE |
 | Call | `CALL PICK` | Real export + ROBOGUIDE |
 | Mixed-logic IF block, nested | `IF (R[2:nSlot]=1) THEN` / `ELSE` / `ENDIF` | ROBOGUIDE |
-| Conditions with `AND` / `OR` | `IF (R[1:n]<=2 OR DI[1]=OFF) THEN` | Documented |
+| Conditions with `AND` / `OR`, flags | `IF (R[1]>=12 OR F[1]=ON) THEN` | ROBOGUIDE |
 | FOR loop | `FOR R[1:i]=1 TO 3` / `ENDFOR` | ROBOGUIDE |
-| FOR loop, descending | `FOR R[3:k]=5 DOWNTO 1` | Documented |
+| FOR loop, descending | `FOR R[5:k]=3 DOWNTO 1` | ROBOGUIDE |
 | Timed wait | `WAIT    .30(sec)` (width 6, no leading zero) | ROBOGUIDE |
-| Other waits | `WAIT R[1:t]`, `WAIT DI[1]=ON`, `WAIT (cond)` | Documented |
-| Pause / abort | `PAUSE`, `ABORT` | Real export |
-| End | `END` | Documented |
+| Other waits | `WAIT R[4]`, `WAIT DI[1]=ON`, `WAIT DO[2]=ON`, `WAIT (DI[1]=OFF OR R[6]<>0)` | ROBOGUIDE |
+| Pause / abort | `PAUSE`, `ABORT` | Real export + ROBOGUIDE |
+| End | `END` | ROBOGUIDE |
 
 ## `/POS` section
 
@@ -81,8 +83,10 @@ P[1]{
 
 ## Known limits
 
-* The arm configuration is not transferred. Every point uses `'N U T, 0, 0, 0'` and a
-  warning is raised. A mapping from ABB `confdata` is being worked on.
+* The arm configuration is not transferred yet. Every point uses `'N U T, 0, 0, 0'` and a warning is
+  raised. The FANUC convention is now measured (`tests/fixtures/probes/results/`): `F` when J5 > 0,
+  turn numbers for J1, J4, J6 in that order, `B` when the wrist is behind axis 1. The ABB side
+  is being measured with the same joint sets.
 * Joint targets (`MoveAbsJ`) are copied axis by axis. Axis zero positions and the J2/J3
   convention differ between the brands, so these points must be re-taught.
 * No `P[n]` comment is emitted (`P[1:HOME]`). The report maps every `P[n]` back to its RAPID name.

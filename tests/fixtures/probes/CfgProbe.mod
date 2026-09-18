@@ -1,6 +1,7 @@
 MODULE CfgProbe
     ! robconv - arm configuration probe. Run PROC Probe (no motion):
-    ! it writes the confdata computed for each joint set to HOME:/cfgprobe.txt
+    ! it writes the confdata, TCP position and orientation computed for each
+    ! joint set to HOME:/cfgprobe.txt
     !  1: reference
     !  2: J5 positive
     !  3: J5 small neg
@@ -42,6 +43,8 @@ MODULE CfgProbe
         FOR i FROM 1 TO Dim(JT,1) DO
             p:=CalcRobT(JT{i},tool0\WObj:=wobj0);
             Write f, NumToStr(i,0)+" "+ValToStr(p.robconf)+" "+ValToStr(JT{i}.robax);
+            Write f, NumToStr(i,0)+" trans "+ValToStr(p.trans);
+            Write f, NumToStr(i,0)+" rot "+ValToStr(p.rot);
         ENDFOR
         Close f;
         TPWrite "cfgprobe.txt written in HOME:";
