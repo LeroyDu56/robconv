@@ -16,7 +16,7 @@ from robconv.convert import ConversionConfig, build_report, convert
 from robconv.fanuc.ls_writer import write_ls
 from robconv.rapid import parse_file
 
-CASES = ["pick_and_place", "logic_and_io"]
+CASES = ["pick_and_place", "logic_and_io", "hmi_and_groups"]
 UPDATE = os.environ.get("ROBCONV_UPDATE_GOLDEN") == "1"
 
 

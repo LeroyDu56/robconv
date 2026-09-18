@@ -162,9 +162,32 @@ def test_calls_stop_return_exit():
 
 
 def test_call_with_arguments_is_a_todo():
-    result = run('TPWrite "hello";')
-    assert tp_lines(result) == ['!TODO l.4 TPWrite \'hello\'']
+    result = run("Grip 3;")
+    assert tp_lines(result) == ["!TODO l.4 Grip 3"]
     assert "with arguments" in todos(result)[0]
+
+
+def test_tpwrite_fixed_text_becomes_message():
+    result = run('TPErase;\nTPWrite "Cycle [A] start";\nTPWrite "Part "+"done";\nTPWrite "";')
+    assert tp_lines(result) == ["MESSAGE[Cycle (A) start]", "MESSAGE[Part done]"]
+
+
+def test_tpwrite_constant_and_long_text():
+    result = run('TPWrite MSG;\nTPWrite "A message that is far too long for the pendant";', 'CONST string MSG:="Ready";')
+    assert tp_lines(result) == ["MESSAGE[Ready]", "MESSAGE[A message that is far to]"]  # 24 characters
+    assert any("cut to 24" in n.message for n in result.notes)
+
+
+def test_tpwrite_with_a_value_stays_a_todo():
+    result = run('TPWrite "Count: "\\Num:=n;\nTPWrite "Code "+ValToStr(n);', "VAR num n;")
+    assert [line.startswith("!TODO") for line in tp_lines(result)] == [True, True]
+    assert all("variable" in m or "run time" in m for m in todos(result))
+
+
+def test_group_outputs_and_inputs():
+    result = run("n:=GInput(giCode);\nSetGO goEcho,n;\nSetGO goStatus,3;", "VAR num n;")
+    assert tp_lines(result) == ["R[1:n]=GI[1]", "GO[1]=R[1:n]", "GO[2]=3"]
+    assert [a.rapid_name for a in result.group_outputs] == ["goEcho", "goStatus"]
 
 
 # ---------------------------------------------------------------------------

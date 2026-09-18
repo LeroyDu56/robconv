@@ -95,7 +95,9 @@ def build_report(result: ConversionResult, config: ConversionConfig, sources: li
     lines += _table(["TP", "RAPID name", "Number from", "Note"],
                     _allocation_rows(result.registers, "R") + _allocation_rows(result.flags, "F")
                     + _allocation_rows(result.digital_outputs, "DO")
-                    + _allocation_rows(result.digital_inputs, "DI"))  # fmt: skip
+                    + _allocation_rows(result.digital_inputs, "DI")
+                    + _allocation_rows(result.group_outputs, "GO")
+                    + _allocation_rows(result.group_inputs, "GI"))  # fmt: skip
 
     lines += [
         "## Speed and zone mapping",

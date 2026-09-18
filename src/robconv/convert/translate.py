@@ -16,6 +16,7 @@ Mapping rules (see the report for the values actually used):
   IF/ELSEIF/ELSE     -> IF (...) THEN / ELSE / ENDIF (ELSEIF unrolled into nested IFs)
   FOR                -> FOR R[n]=a TO|DOWNTO b      WHILE -> LBL/JMP loop
   WaitTime           -> WAIT x(sec)      WaitDI/WaitDO/WaitUntil -> WAIT (cond)
+  TPWrite "text"     -> MESSAGE[text]    TPErase -> (nothing)   SetGO / GInput -> GO[n]= / GI[n]
   PROC call          -> CALL NAME        Stop -> PAUSE   RETURN -> END   EXIT -> ABORT
 """
 
@@ -42,6 +43,7 @@ from robconv.rapid.to_pseudo import format_expr
 from robconv.rapid.walk import walk_statements
 
 REMARK_MAX = 32  # characters after '!' shown on the pendant
+MESSAGE_MAX = 24  # MESSAGE[...] text length (FANUC documentation; checked by the ROBOGUIDE message probe)
 REGISTER_COMMENT_MAX = 16
 
 _NEGATED = {"=": "<>", "<>": "=", "<": ">=", ">=": "<", ">": "<=", "<=": ">"}
@@ -108,6 +110,8 @@ class ConversionResult:
     flags: list[Allocation] = field(default_factory=list)
     digital_outputs: list[Allocation] = field(default_factory=list)
     digital_inputs: list[Allocation] = field(default_factory=list)
+    group_outputs: list[Allocation] = field(default_factory=list)
+    group_inputs: list[Allocation] = field(default_factory=list)
     uframes: list[FrameInfo] = field(default_factory=list)
     utools: list[FrameInfo] = field(default_factory=list)
     speeds: dict[tuple[str, str], str] = field(default_factory=dict)  # (RAPID speed, motion) -> TP
@@ -239,6 +243,8 @@ class Converter:
         self.flags = NumberTable(cfg.flags, cfg.first_flag)
         self.douts = NumberTable(cfg.digital_outputs, cfg.first_digital_output)
         self.dins = NumberTable(cfg.digital_inputs, cfg.first_digital_input)
+        self.gouts = NumberTable(cfg.group_outputs, cfg.first_group_output)
+        self.gins = NumberTable(cfg.group_inputs, cfg.first_group_input)
         self.uframes = NumberTable(cfg.uframes, cfg.first_uframe)
         self.utools = NumberTable(cfg.utools, cfg.first_utool)
         self.frames: dict[tuple[str, int], FrameInfo] = {}
@@ -283,6 +289,8 @@ class Converter:
         res.flags = self.flags.allocations()
         res.digital_outputs = self.douts.allocations()
         res.digital_inputs = self.dins.allocations()
+        res.group_outputs = self.gouts.allocations()
+        res.group_inputs = self.gins.allocations()
         res.uframes = sorted((f for (k, _), f in self.frames.items() if k == "UF"), key=lambda f: f.number)
         res.utools = sorted((f for (k, _), f in self.frames.items() if k == "UT"), key=lambda f: f.number)
         return res
@@ -682,12 +690,59 @@ class _RoutineTranslator:
             if options:
                 raise Untranslatable(f"WaitUntil with {options[0].name} is not converted")
             self.emit(f"WAIT ({self.condition(positional[0])})")
+        elif name == "TPERASE" and not call.args:
+            pass  # the FANUC pendant has no user-screen clear: nothing to emit
+        elif name == "TPWRITE" and len(positional) == 1:
+            self.message(call, positional[0], options)
+        elif name == "SETGO" and len(positional) == 2 and not options:
+            self.emit(f"{self.group(positional[0], 'GO', call.span.line)}={self.numeric(positional[1])}")
         elif call.args:
-            raise Untranslatable(f"call to {call.name} with arguments has no V2 mapping")
+            raise Untranslatable(f"call to {call.name} with arguments has no mapping")
         elif name in self.c.program_names:
             self.emit(f"CALL {self.c.program_names[name]}")
         else:
             raise Untranslatable(f"'{call.name}' is not a routine of the converted modules (system instruction?)")
+
+    def message(self, call: n.ProcCall, text_expr: n.Expr, options: list[n.Arg]) -> None:
+        """TPWrite with fixed text -> MESSAGE[...]. MESSAGE cannot show a variable value."""
+        if options:
+            raise Untranslatable(f"TPWrite \\{options[0].name}: MESSAGE cannot display a variable value")
+        text = ascii_text(self.constant_string(text_expr)).replace("[", "(").replace("]", ")").strip()
+        if not text:
+            return
+        if len(text) > MESSAGE_MAX:
+            self.warn(call, f"TPWrite text cut to {MESSAGE_MAX} characters (FANUC MESSAGE limit): '{text}'")
+            text = text[:MESSAGE_MAX].rstrip()
+        self.emit(f"MESSAGE[{text}]")
+
+    def constant_string(self, expr: n.Expr) -> str:
+        match expr:
+            case n.String(value=value):
+                return value
+            case n.BinaryOp(op="+", left=left, right=right):
+                return self.constant_string(left) + self.constant_string(right)
+            case n.Name(name=name):
+                decl = self.c.symbols.get(name)
+                if decl is not None and decl.storage == "CONST" and isinstance(decl.init, n.String):
+                    return decl.init.value
+        raise Untranslatable(f"text '{format_expr(expr)}' is built at run time: MESSAGE only shows fixed text")
+
+    def group(self, expr: n.Expr, kind: str, line: int) -> str:
+        """GO[n] / GI[n] for a group signal (kind 'GO' or 'GI', implied by the instruction)."""
+        if not isinstance(expr, n.Name):
+            raise Untranslatable(f"group signal must be a name: {format_expr(expr)}")
+        key = expr.name.upper()
+        fixed = self.c.config.group_outputs if kind == "GO" else self.c.config.group_inputs
+        table = self.c.gouts if kind == "GO" else self.c.gins
+        detail = ""
+        if key not in fixed and key in self.c.eio:
+            sig = self.c.eio[key]
+            if sig.signal_type != kind:
+                raise Untranslatable(f"'{expr.name}' is a {sig.signal_type} signal in EIO.cfg, not {kind}")
+            detail = f"EIO.cfg: {kind}, device {sig.device or '-'}, map {sig.device_map or '-'}"
+        elif key not in fixed and self.c.eio:
+            self.c.warn_once(f"signal-eio:{key}", self.name, line, f"'{expr.name}' is not declared in EIO.cfg")
+        return f"{kind}[{table.number(expr.name, detail=detail)}]"
 
     def on_off(self, expr: n.Expr) -> str:
         value = expr.value if isinstance(expr, n.Number | n.Bool) else None
@@ -725,7 +780,9 @@ class _RoutineTranslator:
         return self.numeric(expr)
 
     def numeric(self, expr: n.Expr) -> str:
-        """A single TP numeric operand: a constant (CONST or literal) or a register."""
+        """A single TP numeric operand: a constant (CONST or literal), a register or a group input."""
+        if isinstance(expr, n.FuncCall) and expr.name.upper() == "GINPUT" and len(expr.args) == 1 and expr.args[0].value:
+            return self.group(expr.args[0].value, "GI", expr.span.line)
         if isinstance(expr, n.Name):
             key = expr.name.upper()
             if key in self.loop_vars:

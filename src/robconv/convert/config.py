@@ -9,6 +9,8 @@ be pinned in a JSON file passed with --map:
   "flags":           {"bPartPresent": 5},      RAPID bool     -> F[n]
   "digital_outputs": {"doGrip": 3},            RAPID signal   -> DO[n]
   "digital_inputs":  {"diPartReady": 7},       RAPID signal   -> DI[n]
+  "group_outputs":   {"goStatus": 1},          RAPID signal   -> GO[n]
+  "group_inputs":    {"giCode": 2},            RAPID signal   -> GI[n]
   "uframes":         {"wobjFixture": 2},       wobjdata       -> UFRAME n
   "utools":          {"tGripper": 1},          tooldata       -> UTOOL n
   "joint_speed_ref_mm_s": 2000,
@@ -25,7 +27,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-_MAPPING_KEYS = ("registers", "flags", "digital_outputs", "digital_inputs", "uframes", "utools")
+_MAPPING_KEYS = (
+    "registers", "flags", "digital_outputs", "digital_inputs", "group_outputs", "group_inputs", "uframes", "utools",
+)  # fmt: skip
 
 
 @dataclass
@@ -35,6 +39,8 @@ class ConversionConfig:
     flags: dict[str, int] = field(default_factory=dict)
     digital_outputs: dict[str, int] = field(default_factory=dict)
     digital_inputs: dict[str, int] = field(default_factory=dict)
+    group_outputs: dict[str, int] = field(default_factory=dict)
+    group_inputs: dict[str, int] = field(default_factory=dict)
     uframes: dict[str, int] = field(default_factory=lambda: {"WOBJ0": 0})
     utools: dict[str, int] = field(default_factory=dict)
 
@@ -43,6 +49,8 @@ class ConversionConfig:
     first_flag: int = 1
     first_digital_output: int = 1
     first_digital_input: int = 1
+    first_group_output: int = 1
+    first_group_input: int = 1
     first_uframe: int = 1
     first_utool: int = 1
 

@@ -108,6 +108,6 @@ Automatic numbers start at 1: pin them with a mapping file (`--map`) to avoid cl
 | PLACE | 61 | TODO | 'pPlace' has no initial value (set at run time) — `MoveL pPlace,v300,fine,tGripper\WObj:=wobjFixture;` |
 | PLACE | 64 | WARNING | WaitTime options ignored: InPos |
 | PLACE | 65 | TODO | GOTO is not supported — `GOTO skip_log;` |
-| PLACE | 66 | TODO | call to TPWrite with arguments has no V2 mapping — `TPWrite "Placed in slot "\Num:=nSlot;` |
+| PLACE | 66 | TODO | TPWrite \Num: MESSAGE cannot display a variable value — `TPWrite "Placed in slot "\Num:=nSlot;` |
 | PLACE | 67 | TODO | labels (GOTO targets) are not supported — `skip_log:` |
 | PLACE | 68 | TODO | ERROR handlers are not supported — `ERROR IF ERRNO=ERR_WAIT_MAXTIME RETRY; RAISE;` |
