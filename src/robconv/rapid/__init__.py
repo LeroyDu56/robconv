@@ -17,6 +17,7 @@ class ParseResult:
     encoding: str
     module: nodes.Module | None
     diagnostics: tuple[Diagnostic, ...]
+    text: str = ""  # decoded source, LF line endings
 
     @property
     def ok(self) -> bool:
@@ -24,14 +25,15 @@ class ParseResult:
 
 
 def parse_text(text: str, *, path: str = "<string>") -> ParseResult:
-    module, diagnostics = parse(normalise_newlines(text))
-    return ParseResult(path, "str", module, tuple(diagnostics))
+    text = normalise_newlines(text)
+    module, diagnostics = parse(text)
+    return ParseResult(path, "str", module, tuple(diagnostics), text)
 
 
 def parse_file(path: str | Path) -> ParseResult:
     source = read_source(path)
     module, diagnostics = parse(source.text)
-    return ParseResult(source.path, source.encoding, module, tuple(diagnostics))
+    return ParseResult(source.path, source.encoding, module, tuple(diagnostics), source.text)
 
 
 __all__ = ["RAPID_SUFFIXES", "ParseResult", "nodes", "parse_file", "parse_text"]

@@ -26,7 +26,7 @@ def test_keywords_are_case_insensitive_and_upper_cased():
 
 
 def test_identifier_containing_a_keyword_stays_an_identifier():
-    assert kinds_and_values("P1_STEP1 ERROR_code") == [(TokenKind.IDENT, "P1_STEP1"), (TokenKind.IDENT, "ERROR_code")]
+    assert kinds_and_values("pApp_STEP1 ERROR_code") == [(TokenKind.IDENT, "pApp_STEP1"), (TokenKind.IDENT, "ERROR_code")]
 
 
 def test_string_escapes():

@@ -189,10 +189,10 @@ class Parser:
         if token.is_kw("VAR", "PERS", "CONST"):
             return self.data_decl(start, scope)
         if token.is_kw("RECORD"):
-            return self.skip_to_keyword(start, "ENDRECORD", "RECORD", "user-defined RECORD types are out of V1 scope")
+            return self.skip_to_keyword(start, "ENDRECORD", "RECORD", "user-defined RECORD types are not supported")
         if token.is_kw("ALIAS"):
             self.skip_statement()
-            return self.unsupported(start, "ALIAS", "ALIAS type declarations are out of V1 scope")
+            return self.unsupported(start, "ALIAS", "ALIAS type declarations are not supported")
         raise ParseError(f"unexpected {token.describe()} at module level", token)
 
     def recover_module_item(self, start_index: int, exc: ParseError) -> n.Unsupported:
@@ -237,7 +237,7 @@ class Parser:
                     handler_start,
                     end_kw,
                     f"{handler_start.value}_HANDLER",
-                    f"{handler_start.value} handlers are out of V1 scope",
+                    f"{handler_start.value} handlers are not supported",
                     consume_end=False,
                     also_stop_at=_HANDLER_KEYWORDS,
                 )
@@ -385,7 +385,7 @@ class Parser:
                     return self.data_decl(token, None)
                 case "GOTO" | "RAISE" | "RETRY" | "TRYNEXT" | "CONNECT":
                     self.skip_statement()
-                    return self.unsupported(token, token.value, f"{token.value} is out of V1 scope")
+                    return self.unsupported(token, token.value, f"{token.value} is not supported")
             raise ParseError(f"unexpected keyword {token.value}", token)
 
         if token.is_op("%"):
@@ -397,7 +397,7 @@ class Parser:
             if following.is_op(":"):
                 self.advance()
                 self.advance()
-                return self.unsupported(token, "LABEL", "labels (GOTO targets) are out of V1 scope")
+                return self.unsupported(token, "LABEL", "labels (GOTO targets) are not supported")
             if following.is_op(":=", ".", "{"):
                 return self.assignment()
             return self.proc_call()

@@ -1364,7 +1364,7 @@
         "line": 26,
         "col": 5,
         "kind": "RECORD",
-        "reason": "user-defined RECORD types are out of V1 scope",
+        "reason": "user-defined RECORD types are not supported",
         "raw": "RECORD partdata\n        num id;\n        string label;\n    ENDRECORD"
       },
       {
@@ -2210,7 +2210,7 @@
             "line": 65,
             "col": 9,
             "kind": "GOTO",
-            "reason": "GOTO is out of V1 scope",
+            "reason": "GOTO is not supported",
             "raw": "GOTO skip_log;"
           },
           {
@@ -2252,7 +2252,7 @@
             "line": 67,
             "col": 9,
             "kind": "LABEL",
-            "reason": "labels (GOTO targets) are out of V1 scope",
+            "reason": "labels (GOTO targets) are not supported",
             "raw": "skip_log:"
           }
         ],
@@ -2265,7 +2265,7 @@
             "line": 68,
             "col": 5,
             "kind": "ERROR_HANDLER",
-            "reason": "ERROR handlers are out of V1 scope",
+            "reason": "ERROR handlers are not supported",
             "raw": "ERROR\n        IF ERRNO=ERR_WAIT_MAXTIME RETRY;\n        RAISE;"
           }
         ]

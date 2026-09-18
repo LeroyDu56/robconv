@@ -29,3 +29,7 @@ addopts = "-ra"
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
+# Robot controllers stamp programs with naive local time: timezone rules do not apply.
+ignore = ["DTZ"]

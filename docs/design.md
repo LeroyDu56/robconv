@@ -61,3 +61,43 @@ same line. Comments inside a skipped construct stay in its raw text.
   committed. `test_private_corpus.py` parses every file under
   `$ROBCONV_PRIVATE_CORPUS` (default `./abb`, git-ignored) and asserts zero
   syntax errors; it is skipped when no corpus is present.
+
+## V2: conversion to FANUC TP
+
+```
+ nodes.Module(s) ──► convert/values.py ──► convert/translate.py ──► fanuc/tp.Program ──► fanuc/ls_writer.py ──► .LS
+                     static evaluation     one PROC -> one TP        TP model              byte-exact layout
+                     of RAPID data         program + notes           (lines + /POS)
+                                                    └──► convert/report.py ──► robconv_report.md
+```
+
+| File | Role |
+|---|---|
+| `geometry.py` | Quaternion ↔ matrix ↔ FANUC W,P,R (fixed XYZ), pose composition, `Offs`, `RelTool`. |
+| `convert/values.py` | Evaluates RAPID data known at conversion time (literals, CONST/PERS, predefined `v100`/`z10`/`tool0`, `Offs`/`RelTool`). Anything run-time dependent raises `Unresolvable`. |
+| `convert/config.py` | Heuristic settings and the JSON mapping file (registers, I/O, frames). |
+| `convert/translate.py` | Statement-by-statement translation, number allocation, TODO/warning notes. |
+| `convert/report.py` | Markdown report for the integrator. |
+| `fanuc/tp.py`, `fanuc/ls_writer.py` | TP program model and `.LS` text layout. |
+
+### Decisions
+
+**Never guess.** A statement that cannot be translated faithfully becomes a
+`!TODO l.<rapid line> <rapid source>` remark in the program plus a report
+entry. A statement that fails half-way leaves nothing behind: no orphan `P[n]`,
+no half-emitted `IF`.
+
+**Resolve positions at conversion time.** `Offs(p, dx, dy, dz)` and
+`RelTool(p, dx, dy, dz \Rx \Ry \Rz)` on known targets are computed and written as
+plain `P[n]`. A `VAR` counts as a constant only if nothing ever assigns it.
+Otherwise its value exists only at run time.
+
+**Constants vs variables.** `CONST num` values are inlined. `VAR`/`PERS num`
+become registers, because their value may change at run time or from the pendant.
+
+**Heuristics are explicit.** Joint speed %, `CNT` from the zone radius and the
+default `CONFIG` have no exact equivalent. They are configurable and restated in
+every report.
+
+**Byte-level fidelity of the writer.** The `.LS` layout was reverse-checked on real
+exports. `docs/fanuc_ls_format.md` separates confirmed constructs from documented ones.

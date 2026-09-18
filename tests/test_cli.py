@@ -34,3 +34,21 @@ def test_stats(fixtures_dir, capsys):
     out = capsys.readouterr().out
     assert "2 files, 0 errors" in out
     assert "ERROR_HANDLER" in out
+
+
+def test_convert_writes_ls_files_and_report(fixtures_dir, tmp_path, capsys):
+    out = tmp_path / "out"
+    assert main(["convert", str(fixtures_dir / "rapid" / "pick_and_place.mod"), "-o", str(out)]) == 0
+    assert sorted(p.name for p in out.iterdir()) == ["MAIN.LS", "PICK.LS", "PLACE.LS", "robconv_report.md"]
+    assert (out / "MAIN.LS").read_bytes().startswith(b"/PROG  MAIN\r\n")
+    assert "3 programs written" in capsys.readouterr().out
+
+
+def test_convert_single_routine_with_mapping(fixtures_dir, tmp_path):
+    mapping = tmp_path / "map.json"
+    mapping.write_text('{"digital_outputs": {"DO_GripperClose": 7}}', encoding="utf-8")
+    out = tmp_path / "out"
+    args = ["convert", str(fixtures_dir / "rapid"), "-o", str(out), "--routine", "Pick", "--map", str(mapping)]
+    assert main(args) == 0
+    assert "DO[7]=ON" in (out / "PICK.LS").read_text(encoding="ascii")
+    assert not (out / "MAIN.LS").exists()
