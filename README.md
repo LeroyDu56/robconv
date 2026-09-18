@@ -80,3 +80,7 @@ ROBCONV_UPDATE_GOLDEN=1 pytest tests/rapid/test_golden.py   # regenerate expecte
 - **V2**: RAPID → FANUC mapping (quaternion → WPR, zonedata → CNT/FINE, wobj/tool names →
   UFRAME/UTOOL numbers) and `.LS` writer.
 - Parameterised routines, `CALL` with arguments.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

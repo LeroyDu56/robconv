@@ -15,5 +15,3 @@ dist/
 .mypy_cache/
 .ruff_cache/
 
-# Project notes: cite client names and real data, keep local until anonymised.
-/CLAUDE.md
