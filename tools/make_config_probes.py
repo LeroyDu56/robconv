@@ -69,17 +69,26 @@ def abb_probe() -> str:
         f"    CONST jointtarget JT{{{len(JOINT_SETS)}}}:=[\r\n{rows}];\r\n"
         "\r\n"
         "    PROC Probe()\r\n"
+        "        ! The file is closed after every point: an error keeps what was already written.\r\n"
         "        VAR iodev f;\r\n"
         "        VAR robtarget p;\r\n"
+        "        VAR num nPoint:=0;\r\n"
         '        Open "HOME:" \\File:="cfgprobe.txt", f \\Write;\r\n'
-        "        FOR i FROM 1 TO Dim(JT,1) DO\r\n"
-        "            p:=CalcRobT(JT{i},tool0\\WObj:=wobj0);\r\n"
-        '            Write f, NumToStr(i,0)+" "+ValToStr(p.robconf)+" "+ValToStr(JT{i}.robax);\r\n'
-        '            Write f, NumToStr(i,0)+" trans "+ValToStr(p.trans);\r\n'
-        '            Write f, NumToStr(i,0)+" rot "+ValToStr(p.rot);\r\n'
-        "        ENDFOR\r\n"
         "        Close f;\r\n"
+        "        FOR i FROM 1 TO Dim(JT,1) DO\r\n"
+        "            nPoint:=i;\r\n"
+        '            TPWrite "Probe point "\\Num:=i;\r\n'
+        "            p:=CalcRobT(JT{i},tool0\\WObj:=wobj0);\r\n"
+        '            Open "HOME:" \\File:="cfgprobe.txt", f \\Append;\r\n'
+        '            Write f, NumToStr(i,0)+" "+ValToStr(p.robconf)+" "+ValToStr(JT{i}.robax);\r\n'
+        '            Write f, NumToStr(i,0)+" trans "+NumToStr(p.trans.x,3)+" "+NumToStr(p.trans.y,3)+" "+NumToStr(p.trans.z,3);\r\n'
+        '            Write f, NumToStr(i,0)+" rot "+NumToStr(p.rot.q1,6)+" "+NumToStr(p.rot.q2,6)+" "+NumToStr(p.rot.q3,6)+" "+NumToStr(p.rot.q4,6);\r\n'
+        "            Close f;\r\n"
+        "        ENDFOR\r\n"
         '        TPWrite "cfgprobe.txt written in HOME:";\r\n'
+        "    ERROR\r\n"
+        '        TPWrite "Probe error at point "\\Num:=nPoint;\r\n'
+        '        TPWrite "ERRNO = "\\Num:=ERRNO;\r\n'
         "    ENDPROC\r\n"
         "ENDMODULE\r\n"
     )

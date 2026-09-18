@@ -37,16 +37,25 @@ MODULE CfgProbe
         [[-150,0,0,0,-90,0],[9E9,9E9,9E9,9E9,9E9,9E9]]];
 
     PROC Probe()
+        ! The file is closed after every point: an error keeps what was already written.
         VAR iodev f;
         VAR robtarget p;
+        VAR num nPoint:=0;
         Open "HOME:" \File:="cfgprobe.txt", f \Write;
-        FOR i FROM 1 TO Dim(JT,1) DO
-            p:=CalcRobT(JT{i},tool0\WObj:=wobj0);
-            Write f, NumToStr(i,0)+" "+ValToStr(p.robconf)+" "+ValToStr(JT{i}.robax);
-            Write f, NumToStr(i,0)+" trans "+ValToStr(p.trans);
-            Write f, NumToStr(i,0)+" rot "+ValToStr(p.rot);
-        ENDFOR
         Close f;
+        FOR i FROM 1 TO Dim(JT,1) DO
+            nPoint:=i;
+            TPWrite "Probe point "\Num:=i;
+            p:=CalcRobT(JT{i},tool0\WObj:=wobj0);
+            Open "HOME:" \File:="cfgprobe.txt", f \Append;
+            Write f, NumToStr(i,0)+" "+ValToStr(p.robconf)+" "+ValToStr(JT{i}.robax);
+            Write f, NumToStr(i,0)+" trans "+NumToStr(p.trans.x,3)+" "+NumToStr(p.trans.y,3)+" "+NumToStr(p.trans.z,3);
+            Write f, NumToStr(i,0)+" rot "+NumToStr(p.rot.q1,6)+" "+NumToStr(p.rot.q2,6)+" "+NumToStr(p.rot.q3,6)+" "+NumToStr(p.rot.q4,6);
+            Close f;
+        ENDFOR
         TPWrite "cfgprobe.txt written in HOME:";
+    ERROR
+        TPWrite "Probe error at point "\Num:=nPoint;
+        TPWrite "ERRNO = "\Num:=ERRNO;
     ENDPROC
 ENDMODULE

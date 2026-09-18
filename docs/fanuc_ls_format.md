@@ -83,10 +83,15 @@ P[1]{
 
 ## Known limits
 
-* The arm configuration is not transferred yet. Every point uses `'N U T, 0, 0, 0'` and a warning is
-  raised. The FANUC convention is now measured (`tests/fixtures/probes/results/`): `F` when J5 > 0,
-  turn numbers for J1, J4, J6 in that order, `B` when the wrist is behind axis 1. The ABB side
-  is being measured with the same joint sets.
+* The arm configuration (`CONFIG`) is derived from ABB `confdata` with conventions **measured** on
+  both controllers: the same 16 joint sets were evaluated by RobotStudio (IRB 6700) and ROBOGUIDE.
+  See `src/robconv/convert/configuration.py` and `tests/convert/test_configuration.py`. The
+  measurements show that FANUC J4, J5, J6 turn opposite to ABB, that FANUC J3 is absolute
+  (J2/J3 coupling), and that the flange frames differ by 180° about z. Two limits remain. A
+  different robot model may need another posture to reach a point. The J6 turn number assumes
+  the ABB tool frame is reused as UTOOL. The `U/D` letter follows the ABB manual definition,
+  and no probe point reached ABB "elbow behind". `"config_mapping": false` in the mapping file
+  falls back to `'N U T, 0, 0, 0'`.
 * Joint targets (`MoveAbsJ`) are copied axis by axis. Axis zero positions and the J2/J3
   convention differ between the brands, so these points must be re-taught.
 * No `P[n]` comment is emitted (`P[1:HOME]`). The report maps every `P[n]` back to its RAPID name.

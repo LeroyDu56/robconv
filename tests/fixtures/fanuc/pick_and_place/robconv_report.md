@@ -100,7 +100,7 @@ Automatic numbers start at 1: pin them with a mapping file (`--map`) to avoid cl
 | Program | RAPID line | Kind | Detail |
 |---|---|---|---|
 | MAIN | 32 | WARNING | joint targets (MoveAbsJ) are copied axis by axis: ABB and FANUC axis zero positions and J2/J3 conventions differ, re-teach these points |
-| MAIN | 33 | WARNING | arm configuration (ABB confdata) is not transferred: every point uses CONFIG 'N U T, 0, 0, 0', check reachability and posture in ROBOGUIDE |
+| MAIN | 33 | WARNING | CONFIG derived from ABB confdata (measured conventions, see docs). A different robot model can need a different posture to reach the same point, and the J6 turn number assumes the ABB tool frame is reused as UTOOL: check reachability in ROBOGUIDE |
 | MAIN | 35 | WARNING | 'DI_PartReady' assumed to be a digital input from its name |
 | PLACE | 54 | TODO | assignment of robtarget 'pPlace' — `pPlace:=Offs(pHome,nOffsets{nSlot},0,-400);` |
 | PLACE | 55 | TODO | assignment to a record component or array element — `pPlace.trans.z:=pPlace.trans.z+2.5;` |

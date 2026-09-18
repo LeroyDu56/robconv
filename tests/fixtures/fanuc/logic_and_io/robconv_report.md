@@ -88,4 +88,4 @@ Automatic numbers start at 1: pin them with a mapping file (`--map`) to avoid cl
 | COUNTDOWN | 52 | WARNING | 'diAbort' assumed to be a digital input from its name |
 | PALLETIZE | 24 | WARNING | joint targets (MoveAbsJ) are copied axis by axis: ABB and FANUC axis zero positions and J2/J3 conventions differ, re-teach these points |
 | PALLETIZE | 29 | WARNING | 'diForceRow' assumed to be a digital input from its name |
-| PALLETIZE | 34 | WARNING | arm configuration (ABB confdata) is not transferred: every point uses CONFIG 'N U T, 0, 0, 0', check reachability and posture in ROBOGUIDE |
+| PALLETIZE | 34 | WARNING | CONFIG derived from ABB confdata (measured conventions, see docs). A different robot model can need a different posture to reach the same point, and the J6 turn number assumes the ABB tool frame is reused as UTOOL: check reachability in ROBOGUIDE |

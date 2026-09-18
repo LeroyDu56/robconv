@@ -31,13 +31,13 @@ CONTROL_CODE	= 00000000 00000000;
 /POS
 P[1]{
    GP1:
-	UF : 0, UT : 2,		CONFIG : 'N U T, 0, 0, 0',
+	UF : 0, UT : 2,		CONFIG : 'N U T, 0, 0, 1',
 	X =   812.350  mm,	Y =  -245.100  mm,	Z =   405.000  mm,
 	W =  -179.293 deg,	P =     0.000 deg,	R =   -90.000 deg
 };
 P[2]{
    GP1:
-	UF : 0, UT : 2,		CONFIG : 'N U T, 0, 0, 0',
+	UF : 0, UT : 2,		CONFIG : 'N U T, 0, 0, 1',
 	X =   812.350  mm,	Y =  -245.100  mm,	Z =   305.000  mm,
 	W =  -179.293 deg,	P =     0.000 deg,	R =   -90.000 deg
 };

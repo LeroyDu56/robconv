@@ -8,6 +8,7 @@ entry in the conversion report, with its RAPID line number.
 Mapping rules (see the report for the values actually used):
   MoveJ/MoveAbsJ -> J, MoveL -> L, MoveC -> C, target -> local P[n] with /POS data
   robtarget quaternion -> W,P,R        (robconv.geometry, fixed XYZ angles)
+  confdata           -> CONFIG 'F/N U/D T/B, t1, t4, t6' (robconv.convert.configuration)
   speeddata          -> J: % of joint_speed_ref_mm_s ; L/C: mm/sec
   zonedata           -> FINE / CNT(radius_mm * cnt_per_mm, max 100)
   wobjdata / tooldata-> UFRAME_NUM / UTOOL_NUM, emitted when they change
@@ -24,6 +25,7 @@ import unicodedata
 from dataclasses import dataclass, field
 
 from robconv.convert.config import ConversionConfig
+from robconv.convert.configuration import UnsupportedConfdata, fanuc_config
 from robconv.convert.values import Evaluator, Frame, JointTarget, RobTarget, Symbols, Unresolvable
 from robconv.fanuc.tp import (
     Attributes,
@@ -563,7 +565,6 @@ class _RoutineTranslator:
             return f"P[{self._point_keys[key]}]"
         number = len(self._point_keys) + 1
         self._point_keys[key] = number
-        cfg = self.c.config
         if isinstance(value, JointTarget):
             tp_value: CartesianPosition | JointPosition = JointPosition(tuple(value.joints[:6]))
             self.c.warn_once(
@@ -573,15 +574,31 @@ class _RoutineTranslator:
             )  # fmt: skip
         else:
             (x, y, z), (w, p, r) = value.pose.pos, value.pose.wpr()
-            tp_value = CartesianPosition(x, y, z, w, p, r, cfg.default_config)
-            self.c.warn_once(
-                "config", self.name, line,
-                f"arm configuration (ABB confdata) is not transferred: every point uses CONFIG '{cfg.default_config}',"
-                " check reachability and posture in ROBOGUIDE",
-            )  # fmt: skip
+            tp_value = CartesianPosition(x, y, z, w, p, r, self.config_string(value, line))
         self.positions.append(Position(number, uf, ut, tp_value))
         self.points.append(PointInfo(number, source, line, uf, ut, tp_value))
         return f"P[{number}]"
+
+    def config_string(self, target: RobTarget, line: int) -> str:
+        cfg = self.c.config
+        if not cfg.config_mapping:
+            self.c.warn_once(
+                "config", self.name, line,
+                f"config_mapping is off: every point uses CONFIG '{cfg.default_config}', check the arm posture",
+            )  # fmt: skip
+            return cfg.default_config
+        try:
+            text = fanuc_config(target.conf)
+        except UnsupportedConfdata as exc:
+            self.c.warn_once(f"confdata:{line}", self.name, line, f"{exc}: CONFIG '{cfg.default_config}' used")
+            return cfg.default_config
+        self.c.warn_once(
+            "config-mapped", self.name, line,
+            "CONFIG derived from ABB confdata (measured conventions, see docs). A different robot model can "
+            "need a different posture to reach the same point, and the J6 turn number assumes the ABB tool "
+            "frame is reused as UTOOL: check reachability in ROBOGUIDE",
+        )  # fmt: skip
+        return text
 
     def speed(self, expr: n.Expr, motion: str) -> str:
         speed = self.c.evaluator.speed(expr)

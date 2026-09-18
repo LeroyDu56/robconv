@@ -71,6 +71,7 @@ The matching report is [robconv_report.md](tests/fixtures/fanuc/pick_and_place/r
 |---|---|---|
 | `MoveJ` / `MoveL` / `MoveC` / `MoveAbsJ` | `J` / `L` / `C` / `J` + local `P[n]` | Targets resolved at conversion time, including `Offs()` and `RelTool()` |
 | robtarget quaternion | W, P, R | Fixed-axis XYZ angles, property-tested on thousands of random rotations |
+| `confdata` | `CONFIG 'F/N U/D T/B, t1, t4, t6'` | Conventions measured on RobotStudio + ROBOGUIDE (axis directions, J2/J3 coupling, flange frames) |
 | `wobjdata` / `tooldata` | `UFRAME_NUM` / `UTOOL_NUM` | Frame values (X Y Z W P R) listed in the report |
 | `speeddata` | `%` (joint) / `mm/sec` | Joint %: heuristic, configurable |
 | `zonedata` | `FINE` / `CNTn` | Radius → CNT: heuristic, configurable |
@@ -101,6 +102,7 @@ match the target cell:
   "uframes": {"wobjFixture": 2},
   "utools": {"tGripper": 1},
   "joint_speed_ref_mm_s": 2000,
+  "config_mapping": true,
   "program_name_max_length": 8
 }
 ```
@@ -132,7 +134,7 @@ ROBCONV_UPDATE_GOLDEN=1 pytest                     # regenerate expected outputs
 
 ## Roadmap
 
-- ABB `confdata` → FANUC `CONFIG`, signal types from `EIO.cfg`.
+- Signal types from `EIO.cfg`, joint targets (`MoveAbsJ`) converted with the measured axis conventions.
 - `CALL` with arguments (`AR[n]`), `TEST/CASE` → `SELECT`, `TPWrite` → `MESSAGE`.
 
 ## License
