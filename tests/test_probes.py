@@ -22,3 +22,10 @@ def test_abb_probe_is_up_to_date_and_parses():
     module = parse_module(text)
     (table,) = module.declarations
     assert len(table.init.items) == len(make_config_probes.JOINT_SETS)
+
+
+def test_abb_elbow_probe_is_up_to_date_and_parses():
+    text = (PROBES / "ElbowProbe.mod").read_bytes().decode("ascii")
+    assert text == make_config_probes.abb_elbow_probe()
+    (table,) = parse_module(text).declarations
+    assert len(table.init.items) == len(make_config_probes.ELBOW_SWEEP)

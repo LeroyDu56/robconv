@@ -50,6 +50,7 @@ class ConversionConfig:
     joint_speed_ref_mm_s: float = 2000.0  # RAPID TCP speed that maps to J 100%
     cnt_per_mm: float = 1.0  # zone radius (mm) * cnt_per_mm -> CNT, capped to 100
     config_mapping: bool = True  # CONFIG from ABB confdata; False: default_config everywhere
+    joint_mapping: bool = True  # MoveAbsJ joints with measured axis conventions; False: copied as is
     default_config: str = "N U T, 0, 0, 0"
     program_name_max_length: int = 36  # R-30iB; older controllers: 8
 
@@ -60,7 +61,8 @@ class ConversionConfig:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         config = cls(**overrides)
         unknown = set(data) - set(_MAPPING_KEYS) - {
-            "joint_speed_ref_mm_s", "cnt_per_mm", "config_mapping", "default_config", "program_name_max_length",
+            "joint_speed_ref_mm_s", "cnt_per_mm", "config_mapping", "joint_mapping", "default_config",
+            "program_name_max_length",
         }  # fmt: skip
         if unknown:
             raise ValueError(f"unknown keys in mapping file: {', '.join(sorted(unknown))}")
@@ -70,7 +72,8 @@ class ConversionConfig:
                 if not isinstance(number, int):
                     raise TypeError(f"{key}.{name}: expected an integer, got {number!r}")
                 table[name.upper()] = number
-        for key in ("joint_speed_ref_mm_s", "cnt_per_mm", "config_mapping", "default_config", "program_name_max_length"):
+        for key in ("joint_speed_ref_mm_s", "cnt_per_mm", "config_mapping", "joint_mapping", "default_config",
+                    "program_name_max_length"):
             if key in data:
                 setattr(config, key, data[key])
         return config

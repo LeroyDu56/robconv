@@ -40,3 +40,15 @@ def fanuc_config(conf: tuple[int, int, int, int]) -> str:
     turn_j4 = (1 - cf4) // 4
     turn_j6 = (3 - cf6) // 4
     return f"{flip} {elbow} {side}, {turn_j1}, {turn_j4}, {turn_j6}"
+
+
+def fanuc_joints(abb_joints: tuple[float, ...]) -> tuple[float, ...]:
+    """ABB robax J1..J6 -> FANUC J1..J6 for the same arm and wrist posture.
+
+    Measured conventions: J1 and J2 turn the same way; FANUC J3 is absolute (forearm
+    angle to the horizontal, = -(J2 + J3) ABB); J4, J5, J6 are reversed and the flange
+    frames differ by 180 deg about z. The TCP still lands elsewhere on another robot
+    model (different link lengths): the posture is preserved, not the position.
+    """
+    j1, j2, j3, j4, j5, j6 = abb_joints[:6]
+    return (j1, j2, -(j2 + j3), -j4, -j5, 180 - j6)

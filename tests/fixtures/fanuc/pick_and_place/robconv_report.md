@@ -78,7 +78,7 @@ Automatic numbers start at 1: pin them with a mapping file (`--map`) to avoid cl
 
 | P | RAPID target | RAPID line | UF/UT | Value |
 |---|---|---|---|---|
-| P[1] | `jParking` | 32 | 0/1 | J 0.000 -30.000 30.000 0.000 90.000 0.000 |
+| P[1] | `jParking` | 32 | 0/1 | J 0.000 -30.000 -0.000 -0.000 -90.000 180.000 |
 | P[2] | `pHome` | 33 | 0/2 | X 600.000 Y 0.000 Z 900.000 W 180.000 P 0.000 R 180.000 |
 
 ### PICK
@@ -99,7 +99,7 @@ Automatic numbers start at 1: pin them with a mapping file (`--map`) to avoid cl
 
 | Program | RAPID line | Kind | Detail |
 |---|---|---|---|
-| MAIN | 32 | WARNING | joint targets (MoveAbsJ) are copied axis by axis: ABB and FANUC axis zero positions and J2/J3 conventions differ, re-teach these points |
+| MAIN | 32 | WARNING | joint targets (MoveAbsJ) converted with the measured axis conventions (J3 absolute, J4/J5/J6 reversed, J6 +180): same posture, but the TCP lands elsewhere on another robot model, check joint limits and clearances |
 | MAIN | 33 | WARNING | CONFIG derived from ABB confdata (measured conventions, see docs). A different robot model can need a different posture to reach the same point, and the J6 turn number assumes the ABB tool frame is reused as UTOOL: check reachability in ROBOGUIDE |
 | MAIN | 35 | WARNING | 'DI_PartReady' assumed to be a digital input from its name |
 | PLACE | 54 | TODO | assignment of robtarget 'pPlace' — `pPlace:=Offs(pHome,nOffsets{nSlot},0,-400);` |

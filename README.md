@@ -22,7 +22,7 @@ Pure Python, **no runtime dependency**. Tested against real controller backups (
 pip install -e ".[dev]"
 
 robconv convert tests/fixtures/rapid/pick_and_place.mod -o out/     # .LS files + robconv_report.md
-robconv convert backup/RAPID -o out/ --map mapping.json --routine main
+robconv convert backup/RAPID -o out/ --map mapping.json --routine main   # EIO.cfg found in backup/SYSPAR
 robconv parse   tests/fixtures/rapid/pick_and_place.mod              # RAPID AST as a readable listing
 robconv stats   backup/RAPID                                          # parser coverage report
 ```
@@ -69,14 +69,14 @@ The matching report is [robconv_report.md](tests/fixtures/fanuc/pick_and_place/r
 
 | RAPID | FANUC TP | Notes |
 |---|---|---|
-| `MoveJ` / `MoveL` / `MoveC` / `MoveAbsJ` | `J` / `L` / `C` / `J` + local `P[n]` | Targets resolved at conversion time, including `Offs()` and `RelTool()` |
+| `MoveJ` / `MoveL` / `MoveC` / `MoveAbsJ` | `J` / `L` / `C` / `J` + local `P[n]` | Targets resolved at conversion time, including `Offs()` and `RelTool()`. Joint targets converted with the measured axis conventions |
 | robtarget quaternion | W, P, R | Fixed-axis XYZ angles, property-tested on thousands of random rotations |
 | `confdata` | `CONFIG 'F/N U/D T/B, t1, t4, t6'` | Conventions measured on RobotStudio + ROBOGUIDE (axis directions, J2/J3 coupling, flange frames) |
 | `wobjdata` / `tooldata` | `UFRAME_NUM` / `UTOOL_NUM` | Frame values (X Y Z W P R) listed in the report |
 | `speeddata` | `%` (joint) / `mm/sec` | Joint %: heuristic, configurable |
 | `zonedata` | `FINE` / `CNTn` | Radius → CNT: heuristic, configurable |
 | `num` / `bool` data | `R[n:name]` / `F[n:name]` | |
-| `Set` / `Reset` / `SetDO` | `DO[n]=ON/OFF` | |
+| `Set` / `Reset` / `SetDO` | `DO[n]=ON/OFF` | Signal types read from the backup's `EIO.cfg` when present |
 | `WaitTime`, `WaitDI/DO`, `WaitUntil` | `WAIT` | |
 | `IF / ELSEIF / ELSE` | `IF (...) THEN / ELSE / ENDIF` | `ELSEIF` unrolled, negations pushed down |
 | `FOR` (step ±1), `WHILE` | `FOR R[n]=a TO/DOWNTO b`, `LBL`/`JMP` loop | |
@@ -134,7 +134,6 @@ ROBCONV_UPDATE_GOLDEN=1 pytest                     # regenerate expected outputs
 
 ## Roadmap
 
-- Signal types from `EIO.cfg`, joint targets (`MoveAbsJ`) converted with the measured axis conventions.
 - `CALL` with arguments (`AR[n]`), `TEST/CASE` → `SELECT`, `TPWrite` → `MESSAGE`.
 
 ## License

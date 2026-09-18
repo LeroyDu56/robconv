@@ -79,8 +79,16 @@ def test_movec_has_via_and_target_points():
 def test_moveabsj_becomes_joint_point_with_warning():
     data = "CONST jointtarget jPark:=[[0,-30,30,0,90,0],[9E9,9E9,9E9,9E9,9E9,9E9]];"
     result = run("MoveAbsJ jPark\\NoEOffs,v500,fine,tool0;", data)
-    assert result.programs[0].program.positions[0].value == JointPosition((0, -30, 30, 0, 90, 0))
+    # Measured conventions: J3 absolute = -(J2 + J3), J4/J5 reversed, J6 = 180 - J6.
+    assert result.programs[0].program.positions[0].value == JointPosition((0, -30, 0, 0, -90, 180))
     assert any("joint targets" in n.message for n in result.notes if n.kind == "WARNING")
+
+
+def test_joint_mapping_can_be_disabled():
+    data = "CONST jointtarget jPark:=[[0,-30,30,0,90,0],[9E9,9E9,9E9,9E9,9E9,9E9]];"
+    config = ConversionConfig(joint_mapping=False, timestamp=datetime(2026, 1, 1))
+    result = run("MoveAbsJ jPark,v500,fine,tool0;", data, config)
+    assert result.programs[0].program.positions[0].value == JointPosition((0, -30, 30, 0, 90, 0))
 
 
 def test_custom_speeddata_and_zonedata_are_resolved():

@@ -25,7 +25,7 @@ import unicodedata
 from dataclasses import dataclass, field
 
 from robconv.convert.config import ConversionConfig
-from robconv.convert.configuration import UnsupportedConfdata, fanuc_config
+from robconv.convert.configuration import UnsupportedConfdata, fanuc_config, fanuc_joints
 from robconv.convert.values import Evaluator, Frame, JointTarget, RobTarget, Symbols, Unresolvable
 from robconv.fanuc.tp import (
     Attributes,
@@ -37,6 +37,7 @@ from robconv.fanuc.tp import (
     Program,
 )
 from robconv.rapid import nodes as n
+from robconv.rapid.eio import Signal
 from robconv.rapid.to_pseudo import format_expr
 from robconv.rapid.walk import walk_statements
 
@@ -223,10 +224,13 @@ class Converter:
         modules: list[n.Module],
         config: ConversionConfig | None = None,
         sources: dict[str, str] | None = None,
+        signals: dict[str, Signal] | None = None,
     ) -> None:
-        """`sources` (module name -> RAPID text) lets TODO entries quote the original line."""
+        """`sources` (module name -> RAPID text) lets TODO entries quote the original line.
+        `signals` (from EIO.cfg, upper-cased names) gives the real type of each I/O signal."""
         self.modules = modules
         self.config = config or ConversionConfig()
+        self.eio = signals or {}
         self.source_lines = {name.upper(): text.splitlines() for name, text in (sources or {}).items()}
         self.symbols = Symbols.from_modules(modules)
         self.evaluator = Evaluator(self.symbols)
@@ -398,9 +402,24 @@ class Converter:
         if not isinstance(expr, n.Name) or self.symbols.get(expr.name) is not None:
             return None
         key = expr.name.upper()
-        if key in self.config.digital_inputs or key in self.di_names:
+        # Priority: mapping file, then EIO.cfg, then how the program uses it, then its name.
+        if key in self.config.digital_inputs:
             return f"DI[{self.dins.number(expr.name)}]"
-        if key in self.config.digital_outputs or key in self.do_names:
+        if key in self.config.digital_outputs:
+            return f"DO[{self.douts.number(expr.name)}]"
+        if key in self.eio:
+            sig = self.eio[key]
+            detail = f"EIO.cfg: {sig.signal_type}, device {sig.device or '-'}, map {sig.device_map or '-'}"
+            if sig.signal_type == "DI":
+                return f"DI[{self.dins.number(expr.name, detail=detail)}]"
+            if sig.signal_type == "DO":
+                return f"DO[{self.douts.number(expr.name, detail=detail)}]"
+            raise Untranslatable(f"'{expr.name}' is a {sig.signal_type} signal: group/analog I/O is not converted")
+        if self.eio:
+            self.warn_once(f"signal-eio:{key}", program, line, f"'{expr.name}' is not declared in EIO.cfg")
+        if key in self.di_names:
+            return f"DI[{self.dins.number(expr.name)}]"
+        if key in self.do_names:
             return f"DO[{self.douts.number(expr.name)}]"
         match = _SIGNAL_PREFIX.match(expr.name)
         if match:
@@ -566,12 +585,18 @@ class _RoutineTranslator:
         number = len(self._point_keys) + 1
         self._point_keys[key] = number
         if isinstance(value, JointTarget):
-            tp_value: CartesianPosition | JointPosition = JointPosition(tuple(value.joints[:6]))
-            self.c.warn_once(
-                "joint-targets", self.name, line,
-                "joint targets (MoveAbsJ) are copied axis by axis: ABB and FANUC axis zero positions and "
-                "J2/J3 conventions differ, re-teach these points",
-            )  # fmt: skip
+            if self.c.config.joint_mapping:
+                joints = fanuc_joints(value.joints)
+                message = (
+                    "joint targets (MoveAbsJ) converted with the measured axis conventions (J3 absolute, "
+                    "J4/J5/J6 reversed, J6 +180): same posture, but the TCP lands elsewhere on another robot "
+                    "model, check joint limits and clearances"
+                )
+            else:
+                joints = tuple(value.joints[:6])
+                message = "joint_mapping is off: joint targets (MoveAbsJ) copied axis by axis, re-teach them"
+            tp_value: CartesianPosition | JointPosition = JointPosition(joints)
+            self.c.warn_once("joint-targets", self.name, line, message)
         else:
             (x, y, z), (w, p, r) = value.pose.pos, value.pose.wpr()
             tp_value = CartesianPosition(x, y, z, w, p, r, self.config_string(value, line))
@@ -807,5 +832,6 @@ def convert(
     config: ConversionConfig | None = None,
     routines: list[str] | None = None,
     sources: dict[str, str] | None = None,
+    signals: dict[str, Signal] | None = None,
 ) -> ConversionResult:
-    return Converter(modules, config, sources).convert(routines)
+    return Converter(modules, config, sources, signals).convert(routines)

@@ -84,7 +84,8 @@ P[1]{
 ## Known limits
 
 * The arm configuration (`CONFIG`) is derived from ABB `confdata` with conventions **measured** on
-  both controllers: the same 16 joint sets were evaluated by RobotStudio (IRB 6700) and ROBOGUIDE.
+  both controllers: the same 16 joint sets were evaluated by RobotStudio (IRB 6700-140/2.85) and ROBOGUIDE
+  (M-20iD/25).
   See `src/robconv/convert/configuration.py` and `tests/convert/test_configuration.py`. The
   measurements show that FANUC J4, J5, J6 turn opposite to ABB, that FANUC J3 is absolute
   (J2/J3 coupling), and that the flange frames differ by 180° about z. Two limits remain. A
@@ -92,6 +93,9 @@ P[1]{
   the ABB tool frame is reused as UTOOL. The `U/D` letter follows the ABB manual definition,
   and no probe point reached ABB "elbow behind". `"config_mapping": false` in the mapping file
   falls back to `'N U T, 0, 0, 0'`.
-* Joint targets (`MoveAbsJ`) are copied axis by axis. Axis zero positions and the J2/J3
-  convention differ between the brands, so these points must be re-taught.
+* Joint targets (`MoveAbsJ`) are converted for the same posture:
+  `(J1, J2, -(J2+J3), -J4, -J5, 180-J6)`. J2's direction was confirmed by fitting the arm
+  geometry on the measured positions: the fit recovers the published link lengths of both robots.
+  On another robot model the TCP lands elsewhere, so check joint limits and clearances.
+  `"joint_mapping": false` copies the values as they are.
 * No `P[n]` comment is emitted (`P[1:HOME]`). The report maps every `P[n]` back to its RAPID name.

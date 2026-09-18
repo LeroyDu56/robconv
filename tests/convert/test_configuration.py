@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from helpers import FIXTURES
 
-from robconv.convert.configuration import UnsupportedConfdata, fanuc_config
+from robconv.convert.configuration import UnsupportedConfdata, fanuc_config, fanuc_joints
 from robconv.geometry import mat_mul, quat_to_matrix, rot_x, rot_y, rot_z, wpr_to_matrix
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
@@ -68,12 +68,6 @@ def fanuc_config_from_joints(j: tuple[float, ...], elbow: str = "U", side: str =
 def abb_conf_from_joints(j: tuple[float, ...], cfx_high_bits: int = 0) -> tuple[int, int, int, int]:
     """ABB rules measured on RobotStudio: quadrants of axes 1, 4, 6; cfx bit 0 = axis 5 negative."""
     return (math.floor(j[0] / 90), math.floor(j[3] / 90), math.floor(j[5] / 90), cfx_high_bits | (j[4] < 0))
-
-
-def abb_to_fanuc_joints(j: tuple[float, ...]) -> tuple[float, ...]:
-    """Same physical posture: FANUC J3 is absolute (forearm pitch = -(J2 + J3) ABB), wrist axes
-    reversed, flange frames 180 deg apart about z. J2 does not change the orientation: kept as is."""
-    return (j[0], j[1], -(j[1] + j[2]), -j[3], -j[4], 180 - j[5])
 
 
 def assert_matrix_close(a, b, tol):
@@ -147,7 +141,7 @@ def test_equivalent_joints_give_the_same_flange_orientation():
     rng = random.Random(7)
     for _ in range(200):
         j = tuple(rng.uniform(-170, 170) for _ in range(6))
-        assert_matrix_close(fanuc_orientation(abb_to_fanuc_joints(j), R0_FANUC), abb_orientation(j, R0_ABB), 1e-6)
+        assert_matrix_close(fanuc_orientation(fanuc_joints(j), R0_FANUC), abb_orientation(j, R0_ABB), 1e-6)
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +152,7 @@ def test_equivalent_joints_give_the_same_flange_orientation():
 @pytest.mark.parametrize("index", [1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16])  # J2 = J3 = 0: elbow up, front
 def test_mapping_on_measured_abb_points(index):
     j = JOINTS[index - 1]
-    assert fanuc_config(ABB[index]["conf"]) == fanuc_config_from_joints(abb_to_fanuc_joints(j))
+    assert fanuc_config(ABB[index]["conf"]) == fanuc_config_from_joints(fanuc_joints(j))
 
 
 def test_mapping_on_random_postures():
@@ -169,7 +163,7 @@ def test_mapping_on_random_postures():
             continue
         high = rng.choice((0, 2, 4, 6))
         elbow, side = ("D" if high & 2 else "U"), ("B" if high & 4 else "T")
-        expected = fanuc_config_from_joints(abb_to_fanuc_joints(j), elbow, side)
+        expected = fanuc_config_from_joints(fanuc_joints(j), elbow, side)
         assert fanuc_config(abb_conf_from_joints(j, high)) == expected, j
 
 

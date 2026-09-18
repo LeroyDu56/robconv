@@ -8,7 +8,7 @@ so every construct robconv emits there is valid TP.
 This test regenerates the programs and requires them to match the controller's
 own export byte for byte. Only the header values the controller computes on
 load are taken from the export: sizes, dates, comment padding, LOCAL_REGISTERS.
-The exports predate confdata -> CONFIG, so programs are generated with it off.
+The exports predate confdata -> CONFIG and the MoveAbsJ joint mapping: both are off here.
 """
 
 import re
@@ -38,7 +38,7 @@ def generated_programs():
     programs = {}
     for case in CASES:
         parsed = parse_file(FIXTURES / "rapid" / f"{case}.mod")
-        result = convert([parsed.module], ConversionConfig(timestamp=datetime(2026, 1, 1), config_mapping=False),
+        result = convert([parsed.module], ConversionConfig(timestamp=datetime(2026, 1, 1), config_mapping=False, joint_mapping=False),
                          sources={parsed.module.name: parsed.text})  # fmt: skip
         programs |= {info.program.name: info.program for info in result.programs}
     return programs

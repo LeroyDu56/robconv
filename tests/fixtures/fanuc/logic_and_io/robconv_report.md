@@ -77,7 +77,7 @@ Automatic numbers start at 1: pin them with a mapping file (`--map`) to avoid cl
 
 | P | RAPID target | RAPID line | UF/UT | Value |
 |---|---|---|---|---|
-| P[1] | `jSafe` | 24 | 0/1 | J 0.000 -20.000 20.000 0.000 70.000 0.000 |
+| P[1] | `jSafe` | 24 | 0/1 | J 0.000 -20.000 -0.000 -0.000 -70.000 180.000 |
 | P[2] | `Offs(pStack, 0, 0, 150)` | 34 | 1/2 | X 500.000 Y -300.000 Z 550.000 W 180.000 P 0.000 R 90.000 |
 | P[3] | `pStack` | 35 | 1/2 | X 500.000 Y -300.000 Z 400.000 W 180.000 P 0.000 R 90.000 |
 
@@ -86,6 +86,6 @@ Automatic numbers start at 1: pin them with a mapping file (`--map`) to avoid cl
 | Program | RAPID line | Kind | Detail |
 |---|---|---|---|
 | COUNTDOWN | 52 | WARNING | 'diAbort' assumed to be a digital input from its name |
-| PALLETIZE | 24 | WARNING | joint targets (MoveAbsJ) are copied axis by axis: ABB and FANUC axis zero positions and J2/J3 conventions differ, re-teach these points |
+| PALLETIZE | 24 | WARNING | joint targets (MoveAbsJ) converted with the measured axis conventions (J3 absolute, J4/J5/J6 reversed, J6 +180): same posture, but the TCP lands elsewhere on another robot model, check joint limits and clearances |
 | PALLETIZE | 29 | WARNING | 'diForceRow' assumed to be a digital input from its name |
 | PALLETIZE | 34 | WARNING | CONFIG derived from ABB confdata (measured conventions, see docs). A different robot model can need a different posture to reach the same point, and the J6 turn number assumes the ABB tool frame is reused as UTOOL: check reachability in ROBOGUIDE |

@@ -20,6 +20,7 @@ from robconv.convert import ConversionConfig, build_report, convert
 from robconv.fanuc.ls_writer import write_ls
 from robconv.rapid import RAPID_SUFFIXES, parse_file
 from robconv.rapid import nodes as n
+from robconv.rapid.eio import find_eio, read_eio
 from robconv.rapid.to_json import dumps, result_to_data
 from robconv.rapid.to_pseudo import to_pseudo
 from robconv.rapid.walk import module_statements
@@ -53,6 +54,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_conv.add_argument("paths", type=Path, nargs="+", help="RAPID files or folders (all modules share their data)")
     p_conv.add_argument("-o", "--output", type=Path, required=True, help="output folder")
     p_conv.add_argument("--map", type=Path, help="JSON mapping file (registers, I/O, frames...)")
+    p_conv.add_argument(
+        "--eio", type=Path,
+        help="ABB EIO.cfg giving the signal types; default: found in the given folders or a SYSPAR folder next to them",
+    )  # fmt: skip
     p_conv.add_argument(
         "--routine", action="append",
         help="convert only this PROC (repeatable); default: every PROC of non-system modules",
@@ -145,7 +150,16 @@ def _cmd_convert(args: argparse.Namespace) -> int:
     except (OSError, ValueError, TypeError) as exc:  # json.JSONDecodeError is a ValueError
         print(f"robconv: invalid mapping file {args.map}: {exc}", file=sys.stderr)
         return 2
-    result = convert(modules, config, args.routine, texts)
+    eio_path = args.eio or find_eio(args.paths)
+    signals = None
+    if eio_path:
+        try:
+            signals = read_eio(eio_path)
+        except OSError as exc:
+            print(f"robconv: cannot read {eio_path}: {exc}", file=sys.stderr)
+            return 2
+        print(f"I/O signal types from {eio_path} ({len(signals)} signals)")
+    result = convert(modules, config, args.routine, texts, signals)
 
     args.output.mkdir(parents=True, exist_ok=True)
     for info in result.programs:
