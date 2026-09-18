@@ -238,11 +238,9 @@ def test_abb_elbow_bit_is_the_geometric_criterion(index):
     assert bool(p["conf"][3] & 2) == elbow_beyond_shoulder_line(j[1], j[1] + j[2], ABB_ARM)
 
 
-@pytest.mark.parametrize("index", range(len(ABB_ALL)))
+@pytest.mark.parametrize("index", [i for i, p in enumerate(ABB_ALL) if p["joints"][0] == 0])  # x axis = arm plane
 def test_abb_side_bit_is_wrist_centre_behind_axis_1(index):
     p = ABB_ALL[index]
-    if p["joints"][0] != 0:
-        pytest.skip("criterion written for J1 = 0")
     z_axis = [p["rot"][r][2] for r in range(3)]
     wrist_x = p["trans"][0] - ABB_ARM["d6"] * z_axis[0]
     assert bool(p["conf"][3] & 4) == (wrist_x < 0)

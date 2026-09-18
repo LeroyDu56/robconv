@@ -97,7 +97,7 @@ P[1]{
   falls back to `'N U T, 0, 0, 0'`.
 * Joint targets (`MoveAbsJ`) are converted for the same posture:
   `(J1, J2, -(J2+J3), -J4, -J5, 180-J6)`. J2's direction was confirmed by fitting the arm
-  geometry on the measured positions: the fit recovers the published link lengths of both robots.
+  geometry on the measured positions: the fit is exact and recovers the M-20iD/25 link lengths.
   On another robot model the TCP lands elsewhere, so check joint limits and clearances.
   `"joint_mapping": false` copies the values as they are.
 * No `P[n]` comment is emitted (`P[1:HOME]`). The report maps every `P[n]` back to its RAPID name.
