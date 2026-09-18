@@ -9,6 +9,7 @@ description = "Industrial robot program converter: ABB RAPID parser (V1), FANUC 
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+authors = [{ name = "Enzo LEROY" }]
 license-files = ["LICENSE"]
 dependencies = []  # runtime: standard library only, on purpose
 
