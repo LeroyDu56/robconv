@@ -40,6 +40,8 @@ Every construct robconv emits has now been validated on a controller.
 | Circular motion | `C P[1]` + continuation line `    :  P[2] 300mm/sec CNT10    ;` | ROBOGUIDE |
 | Frames | `UFRAME_NUM=1`, `UTOOL_NUM=2` | Real export + ROBOGUIDE |
 | Digital output | `DO[1]=ON` | Real export + ROBOGUIDE |
+| Group I/O | `GO[1]=R[1:nCode]`, `GO[2]=3`, `R[1:nCode]=GI[1]` | ROBOGUIDE |
+| Operator message | `MESSAGE[Cell ready]`: 24 characters at most, longer texts are **silently cut by the controller** (probe: 24/25/32/40 characters all accepted, all exported cut to 24) | ROBOGUIDE |
 | Register | `R[2:nSlot]=R[1:i]`, `R[3:nCycles]=R[3:nCycles]+1` | ROBOGUIDE |
 | Register with `DIV` / `MOD` | `R[2:nRow]=R[1] DIV 4` | ROBOGUIDE |
 | Flag | `F[1]=(ON)` | Real export + ROBOGUIDE |

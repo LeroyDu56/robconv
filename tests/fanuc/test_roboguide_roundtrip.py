@@ -31,7 +31,7 @@ def controller_header(text: str) -> dict[str, str]:
     return {m[1]: m[2] for m in re.finditer(r"^(\w+)\t+= (.*?);?\r$", header, re.MULTILINE)}
 
 
-CASES = ["pick_and_place", "logic_and_io"]
+CASES = ["pick_and_place", "logic_and_io", "hmi_and_groups"]
 
 
 def generated_programs():
@@ -107,3 +107,17 @@ def test_cartesian_positions_computed_by_the_controller_are_reproduced():
         ),
     )
     assert write_ls(program) == real
+
+
+def test_controller_cuts_messages_at_the_limit_robconv_uses():
+    """MESSAGE[...] of 24, 25, 32 and 40 characters were loaded into ROBOGUIDE: all accepted,
+    every text silently cut to 24 characters on export. robconv cuts at the same length (with a warning)."""
+    from robconv.convert.translate import MESSAGE_MAX
+
+    probes = FIXTURES / "probes" / "message_length"
+    for sent in sorted((probes / "sent").glob("MSG*.LS")):
+        exported = (probes / "roboguide" / sent.name).read_bytes().decode("ascii")
+        sent_text = re.search(r"MESSAGE\[([^\]]*)\]", sent.read_bytes().decode("ascii"))[1]
+        kept_text = re.search(r"MESSAGE\[([^\]]*)\]", exported)[1]
+        assert kept_text == sent_text[:MESSAGE_MAX], sent.name
+    assert MESSAGE_MAX == 24

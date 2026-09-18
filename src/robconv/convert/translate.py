@@ -43,7 +43,7 @@ from robconv.rapid.to_pseudo import format_expr
 from robconv.rapid.walk import walk_statements
 
 REMARK_MAX = 32  # characters after '!' shown on the pendant
-MESSAGE_MAX = 24  # MESSAGE[...] text length (FANUC documentation; checked by the ROBOGUIDE message probe)
+MESSAGE_MAX = 24  # MESSAGE[...] text length: longer texts are silently cut by the controller (ROBOGUIDE probe)
 REGISTER_COMMENT_MAX = 16
 
 _NEGATED = {"=": "<>", "<>": "=", "<": ">=", ">=": "<", ">": "<=", "<=": ">"}
