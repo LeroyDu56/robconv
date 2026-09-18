@@ -86,7 +86,8 @@ The matching report is [robconv_report.md](tests/fixtures/fanuc/pick_and_place/r
 ## How it was validated
 
 A converter that produces plausible-looking but wrong robot programs is dangerous, so every
-claim below is backed by a test that runs in CI.
+claim below is backed by a test. The tests on private backups run locally only. Everything else,
+including the controller measurements stored as fixtures, runs in CI.
 
 **1. Real programs (private, never published).**
 - **RAPID side:** a RobotWare 7 backup (24 modules, ~10,000 lines) parses with zero syntax errors, and 365 moves convert.
