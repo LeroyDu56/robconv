@@ -1,0 +1,19 @@
+# --- Private client material: NEVER commit ------------------------------
+# Real robot backups (ABB / FANUC) used as a local test corpus.
+/abb/
+/fanuc/
+/private/
+
+# --- Python ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Project notes: cite client names and real data, keep local until anonymised.
+/CLAUDE.md

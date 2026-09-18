@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robconv"
+version = "0.1.0"
+description = "Industrial robot program converter: ABB RAPID parser (V1), FANUC TP writer (V2, planned)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []  # runtime: standard library only, on purpose
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff"]
+
+[project.scripts]
+robconv = "robconv.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
