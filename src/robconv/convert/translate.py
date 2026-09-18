@@ -704,28 +704,38 @@ class _RoutineTranslator:
             raise Untranslatable(f"'{call.name}' is not a routine of the converted modules (system instruction?)")
 
     def message(self, call: n.ProcCall, text_expr: n.Expr, options: list[n.Arg]) -> None:
-        """TPWrite with fixed text -> MESSAGE[...]. MESSAGE cannot show a variable value."""
-        if options:
-            raise Untranslatable(f"TPWrite \\{options[0].name}: MESSAGE cannot display a variable value")
-        text = ascii_text(self.constant_string(text_expr)).replace("[", "(").replace("]", ")").strip()
+        """TPWrite -> MESSAGE[fixed text]. MESSAGE cannot show a variable: values (\\Num, \\Pos,
+        ValToStr...) are left out and listed in a warning, so the operator still sees the text."""
+        fixed, dropped = self.split_text(text_expr)
+        dropped += [f"\\{a.name}:={format_expr(a.value)}" if a.value else f"\\{a.name}" for a in options]
+        text = ascii_text(fixed).replace("[", "(").replace("]", ")").strip()
         if not text:
+            if dropped:
+                raise Untranslatable("TPWrite shows only a value: MESSAGE cannot display variables")
             return
+        if dropped and self.c.config.tpwrite_values == "todo":
+            raise Untranslatable(f"TPWrite shows a value ({', '.join(dropped)}): MESSAGE cannot display variables")
+        if dropped:
+            self.warn(call, f"TPWrite value not shown (MESSAGE displays fixed text only): {', '.join(dropped)}")
         if len(text) > MESSAGE_MAX:
             self.warn(call, f"TPWrite text cut to {MESSAGE_MAX} characters (FANUC MESSAGE limit): '{text}'")
             text = text[:MESSAGE_MAX].rstrip()
         self.emit(f"MESSAGE[{text}]")
 
-    def constant_string(self, expr: n.Expr) -> str:
+    def split_text(self, expr: n.Expr) -> tuple[str, list[str]]:
+        """(fixed text, parts only known at run time) of a string expression."""
         match expr:
             case n.String(value=value):
-                return value
+                return value, []
             case n.BinaryOp(op="+", left=left, right=right):
-                return self.constant_string(left) + self.constant_string(right)
+                left_text, left_dropped = self.split_text(left)
+                right_text, right_dropped = self.split_text(right)
+                return left_text + right_text, left_dropped + right_dropped
             case n.Name(name=name):
                 decl = self.c.symbols.get(name)
                 if decl is not None and decl.storage == "CONST" and isinstance(decl.init, n.String):
-                    return decl.init.value
-        raise Untranslatable(f"text '{format_expr(expr)}' is built at run time: MESSAGE only shows fixed text")
+                    return decl.init.value, []
+        return "", [format_expr(expr)]
 
     def group(self, expr: n.Expr, kind: str, line: int) -> str:
         """GO[n] / GI[n] for a group signal (kind 'GO' or 'GI', implied by the instruction)."""

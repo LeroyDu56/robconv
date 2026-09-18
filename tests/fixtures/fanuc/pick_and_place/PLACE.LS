@@ -37,7 +37,7 @@ CONTROL_CODE	= 00000000 00000000;
   15:  DO[1]=OFF ;
   16:  WAIT    .20(sec) ;
   17:  !TODO l.65 GOTO skip_log ;
-  18:  !TODO l.66 TPWrite 'Placed in slo ;
+  18:  MESSAGE[Placed in slot] ;
   19:  !TODO l.67 skip_log: ;
   20:  !TODO l.68 ERROR IF ERRNO=ERR_WAI ;
 /POS

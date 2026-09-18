@@ -16,6 +16,7 @@ be pinned in a JSON file passed with --map:
   "joint_speed_ref_mm_s": 2000,
   "cnt_per_mm": 1.0,
   "config_mapping": true,
+  "tpwrite_values": "text",
   "program_name_max_length": 36
 }
 
@@ -59,6 +60,7 @@ class ConversionConfig:
     cnt_per_mm: float = 1.0  # zone radius (mm) * cnt_per_mm -> CNT, capped to 100
     config_mapping: bool = True  # CONFIG from ABB confdata; False: default_config everywhere
     joint_mapping: bool = True  # MoveAbsJ joints with measured axis conventions; False: copied as is
+    tpwrite_values: str = "text"  # TPWrite showing a value: "text" = MESSAGE[text] + warning, "todo" = TODO
     default_config: str = "N U T, 0, 0, 0"
     program_name_max_length: int = 36  # R-30iB; older controllers: 8
 
@@ -70,7 +72,7 @@ class ConversionConfig:
         config = cls(**overrides)
         unknown = set(data) - set(_MAPPING_KEYS) - {
             "joint_speed_ref_mm_s", "cnt_per_mm", "config_mapping", "joint_mapping", "default_config",
-            "program_name_max_length",
+            "program_name_max_length", "tpwrite_values",
         }  # fmt: skip
         if unknown:
             raise ValueError(f"unknown keys in mapping file: {', '.join(sorted(unknown))}")
@@ -81,7 +83,9 @@ class ConversionConfig:
                     raise TypeError(f"{key}.{name}: expected an integer, got {number!r}")
                 table[name.upper()] = number
         for key in ("joint_speed_ref_mm_s", "cnt_per_mm", "config_mapping", "joint_mapping", "default_config",
-                    "program_name_max_length"):
+                    "program_name_max_length", "tpwrite_values"):
             if key in data:
                 setattr(config, key, data[key])
+        if config.tpwrite_values not in ("text", "todo"):
+            raise ValueError(f"tpwrite_values: expected 'text' or 'todo', got {config.tpwrite_values!r}")
         return config

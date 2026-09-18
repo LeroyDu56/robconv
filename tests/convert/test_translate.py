@@ -178,10 +178,25 @@ def test_tpwrite_constant_and_long_text():
     assert any("cut to 24" in n.message for n in result.notes)
 
 
-def test_tpwrite_with_a_value_stays_a_todo():
-    result = run('TPWrite "Count: "\\Num:=n;\nTPWrite "Code "+ValToStr(n);', "VAR num n;")
-    assert [line.startswith("!TODO") for line in tp_lines(result)] == [True, True]
-    assert all("variable" in m or "run time" in m for m in todos(result))
+def test_tpwrite_with_a_value_shows_the_text_and_reports_the_value():
+    result = run('TPWrite "Count: "\\Num:=n;\nTPWrite "Code "+ValToStr(n)+" ok";', "VAR num n;")
+    assert tp_lines(result) == ["MESSAGE[Count:]", "MESSAGE[Code  ok]"]
+    warnings = [x.message for x in result.notes if x.kind == "WARNING"]
+    assert any("\\Num:=n" in w for w in warnings)
+    assert any("ValToStr(n)" in w for w in warnings)
+    assert not todos(result)
+
+
+def test_tpwrite_values_setting_can_keep_the_todo():
+    config = ConversionConfig(tpwrite_values="todo", timestamp=datetime(2026, 1, 1))
+    result = run('TPWrite "Count: "\\Num:=n;', "VAR num n;", config)
+    assert tp_lines(result)[0].startswith("!TODO")
+
+
+def test_tpwrite_with_only_a_value_stays_a_todo():
+    result = run("TPWrite ValToStr(n);", "VAR num n;")
+    assert tp_lines(result)[0].startswith("!TODO")
+    assert "only a value" in todos(result)[0]
 
 
 def test_group_outputs_and_inputs():
