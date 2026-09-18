@@ -54,8 +54,11 @@ MODULE CfgProbe
             Close f;
         ENDFOR
         TPWrite "cfgprobe.txt written in HOME:";
+        ! Stop here: in continuous run mode main would restart and rewrite the file.
+        Stop;
     ERROR
         TPWrite "Probe error at point "\Num:=nPoint;
         TPWrite "ERRNO = "\Num:=ERRNO;
+        Stop;
     ENDPROC
 ENDMODULE

@@ -94,9 +94,12 @@ def _abb_probe(module: str, proc: str, filename: str, joint_sets: list[tuple[str
         "            Close f;\r\n"
         "        ENDFOR\r\n"
         f'        TPWrite "{filename} written in HOME:";\r\n'
+        "        ! Stop here: in continuous run mode main would restart and rewrite the file.\r\n"
+        "        Stop;\r\n"
         "    ERROR\r\n"
         '        TPWrite "Probe error at point "\\Num:=nPoint;\r\n'
         '        TPWrite "ERRNO = "\\Num:=ERRNO;\r\n'
+        "        Stop;\r\n"
         "    ENDPROC\r\n"
         "ENDMODULE\r\n"
     )

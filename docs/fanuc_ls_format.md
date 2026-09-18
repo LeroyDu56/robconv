@@ -90,8 +90,10 @@ P[1]{
   measurements show that FANUC J4, J5, J6 turn opposite to ABB, that FANUC J3 is absolute
   (J2/J3 coupling), and that the flange frames differ by 180° about z. Two limits remain. A
   different robot model may need another posture to reach a point. The J6 turn number assumes
-  the ABB tool frame is reused as UTOOL. The `U/D` letter follows the ABB manual definition,
-  and no probe point reached ABB "elbow behind". `"config_mapping": false` in the mapping file
+  the ABB tool frame is reused as UTOOL. The `U/D` and `T/B` letters are the same geometric criteria on
+  both brands: wrist centre past the shoulder–elbow line, and wrist centre behind axis 1. This was
+  checked on every probe point, including a J3 sweep showing that the ABB bit flips exactly at the
+  IRB 6700 elbow singularity (J3 = −81.83°). `"config_mapping": false` in the mapping file
   falls back to `'N U T, 0, 0, 0'`.
 * Joint targets (`MoveAbsJ`) are converted for the same posture:
   `(J1, J2, -(J2+J3), -J4, -J5, 180-J6)`. J2's direction was confirmed by fitting the arm

@@ -185,3 +185,71 @@ def test_mapping_examples(conf, expected):
 def test_non_six_axis_confdata_is_rejected():
     with pytest.raises(UnsupportedConfdata):
         fanuc_config((0, 0, 0, 8))
+
+
+# ---------------------------------------------------------------------------
+# 4. Elbow (U/D) and side (T/B): the same geometric criteria on both brands
+# ---------------------------------------------------------------------------
+# Planar arm geometry fitted on the probe positions (zero residual; matches the
+# published dimensions): forearm length d4 and J3-J4 offset a3, flange distance d6.
+ABB_ARM = {"d4": 1392.5, "a3": 200.0, "d6": 350.0}  # IRB 6700-140/2.85
+FANUC_ARM = {"d4": 890.0, "a3": 215.0}  # M-20iD/25
+
+
+def elbow_beyond_shoulder_line(j2: float, forearm_pitch: float, arm: dict) -> bool:
+    """True when the wrist centre is past the line through J2 and J3 (elbow 'down' / 'behind')."""
+    th, ph = math.radians(j2), math.radians(forearm_pitch)
+    upper = (math.sin(th), math.cos(th))  # (x, z), 0 deg = vertical
+    forearm = (arm["d4"] * math.cos(ph) + arm["a3"] * math.sin(ph), -arm["d4"] * math.sin(ph) + arm["a3"] * math.cos(ph))
+    return upper[0] * forearm[1] - upper[1] * forearm[0] > 0
+
+
+def load_abb_file(name: str) -> dict[int, dict]:
+    points: dict[int, dict] = {}
+    for line in (RESULTS / name).read_text().splitlines():
+        index, kind, *rest = line.split()
+        entry = points.setdefault(int(index), {})
+        if kind == "trans":
+            entry["trans"] = tuple(map(float, rest))
+        elif kind == "rot":
+            entry["rot"] = quat_to_matrix(tuple(map(float, rest)))
+        else:
+            entry["conf"] = tuple(int(v) for v in kind.strip("[]").split(","))
+            entry["joints"] = tuple(float(v) for v in rest[0].strip("[]").split(","))
+    return points
+
+
+ABB_ELBOW = load_abb_file("elbowprobe_robotstudio.txt")
+ABB_ALL = [p for p in load_abb_file("cfgprobe_robotstudio.txt").values()] + list(ABB_ELBOW.values())
+
+
+def test_elbow_sweep_crosses_the_predicted_singularity():
+    singular_j3 = -math.degrees(math.atan2(ABB_ARM["d4"], ABB_ARM["a3"]))
+    assert singular_j3 == pytest.approx(-81.83, abs=0.01)
+    flips = [p["joints"][2] for p in ABB_ELBOW.values() if p["joints"][1] == 0 and p["conf"][3] & 2]
+    fronts = [p["joints"][2] for p in ABB_ELBOW.values() if p["joints"][1] == 0 and not p["conf"][3] & 2]
+    assert max(flips) < singular_j3 < min(j for j in fronts if j < 0)
+
+
+@pytest.mark.parametrize("index", range(len(ABB_ALL)))
+def test_abb_elbow_bit_is_the_geometric_criterion(index):
+    p = ABB_ALL[index]
+    j = p["joints"]
+    assert bool(p["conf"][3] & 2) == elbow_beyond_shoulder_line(j[1], j[1] + j[2], ABB_ARM)
+
+
+@pytest.mark.parametrize("index", range(len(ABB_ALL)))
+def test_abb_side_bit_is_wrist_centre_behind_axis_1(index):
+    p = ABB_ALL[index]
+    if p["joints"][0] != 0:
+        pytest.skip("criterion written for J1 = 0")
+    z_axis = [p["rot"][r][2] for r in range(3)]
+    wrist_x = p["trans"][0] - ABB_ARM["d6"] * z_axis[0]
+    assert bool(p["conf"][3] & 4) == (wrist_x < 0)
+
+
+@pytest.mark.parametrize("index", range(1, 15))
+def test_fanuc_elbow_letter_is_the_geometric_criterion(index):
+    j = JOINTS[index - 1]
+    letter = FANUC[index]["config"].split()[1]
+    assert (letter == "D") == elbow_beyond_shoulder_line(j[1], -j[2], FANUC_ARM)

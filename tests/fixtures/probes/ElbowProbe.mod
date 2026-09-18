@@ -46,8 +46,11 @@ MODULE ElbowProbe
             Close f;
         ENDFOR
         TPWrite "elbowprobe.txt written in HOME:";
+        ! Stop here: in continuous run mode main would restart and rewrite the file.
+        Stop;
     ERROR
         TPWrite "Probe error at point "\Num:=nPoint;
         TPWrite "ERRNO = "\Num:=ERRNO;
+        Stop;
     ENDPROC
 ENDMODULE
