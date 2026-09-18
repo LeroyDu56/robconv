@@ -250,10 +250,15 @@ class Converter:
 
     # -- entry point -------------------------------------------------------
 
-    def convert(self, routines: list[str] | None = None) -> ConversionResult:
+    def convert(self, routines: list[str] | None = None, program_modules: set[str] | None = None) -> ConversionResult:
+        """`program_modules` (upper-case names): only their routines become programs, the other
+        modules are data. Default: every module without the SYSMODULE attribute."""
         wanted = {r.upper() for r in routines} if routines else None
         for module in self.modules:
-            is_system = "SYSMODULE" in module.attributes
+            if program_modules is not None:
+                is_system = module.name.upper() not in program_modules
+            else:
+                is_system = "SYSMODULE" in module.attributes
             for routine in module.routines:
                 if wanted is not None:
                     if routine.name.upper() not in wanted:
@@ -285,7 +290,7 @@ class Converter:
     @staticmethod
     def _skip_reason(routine: n.Routine) -> str:
         if routine.kind != "PROC":
-            return f"{routine.kind} routines have no TP program equivalent in V2"
+            return f"{routine.kind} routines have no TP program equivalent"
         if routine.params:
             return "routine parameters are not converted (TP CALL arguments are untyped AR[n])"
         return ""
@@ -537,7 +542,7 @@ class _RoutineTranslator:
             case n.Unsupported():
                 self.todo(s, s.reason)
             case _:
-                raise Untranslatable(f"{type(s).__name__} has no TP mapping in V2")
+                raise Untranslatable(f"{type(s).__name__} has no TP mapping")
 
     def local_decl(self, decl: n.DataDecl) -> None:
         # Positions and other data are resolved on use; num/bool locals become registers/flags.
@@ -833,5 +838,6 @@ def convert(
     routines: list[str] | None = None,
     sources: dict[str, str] | None = None,
     signals: dict[str, Signal] | None = None,
+    program_modules: set[str] | None = None,
 ) -> ConversionResult:
-    return Converter(modules, config, sources, signals).convert(routines)
+    return Converter(modules, config, sources, signals).convert(routines, program_modules)

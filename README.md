@@ -15,6 +15,27 @@ heuristics applied, and every RAPID line that still needs manual work.
 > text listings to load and check in ROBOGUIDE (or on the controller). Anything robconv cannot
 > convert faithfully becomes a `!TODO` remark plus a report entry. It is never guessed.
 
+## Download (Windows)
+
+Get **`robconv.exe`** from the [latest release](https://github.com/LeroyDu56/robconv/releases/latest).
+Nothing to install:
+
+- **drop** an ABB backup (folder or `.zip`) or RAPID files **on the icon**, or
+- **double-click** it and pick them in the window.
+
+robconv recognises the backup layout:
+- each robot task (`T_ROB1`, `T_ROB2`...) is converted on its own;
+- system modules are used as data, and `EIO.cfg` gives the I/O types;
+- licences, binaries and other files are ignored.
+
+The `.LS` programs and the report (`robconv_report.html`) land in a `robconv_<name>` folder next to
+the input, which opens when the conversion is done. **Everything runs locally**, so client backups
+never leave the computer.
+
+The executable is not code-signed. On first launch, SmartScreen may ask for confirmation
+(**More info → Run anyway**). Each release ships the SHA-256 of the exe, built by GitHub Actions
+from the tagged commit.
+
 ## How it works
 
 ```mermaid
@@ -34,13 +55,14 @@ flowchart LR
 
 Pure Python, **no runtime dependency**.
 
-## Quick start
+## Command line (Python 3.11+)
 
 ```bash
 pip install -e ".[dev]"
 
-robconv convert tests/fixtures/rapid/pick_and_place.mod -o out/     # .LS files + robconv_report.md
-robconv convert backup/RAPID -o out/ --map mapping.json --routine main   # EIO.cfg found in backup/SYSPAR
+robconv convert tests/fixtures/rapid/pick_and_place.mod              # -> robconv_pick_and_place/
+robconv convert path/to/backup.zip --map mapping.json                 # one folder per robot task
+robconv-gui                                                           # the desktop window
 robconv parse   tests/fixtures/rapid/pick_and_place.mod              # RAPID AST as a readable listing
 robconv stats   backup/RAPID                                          # parser coverage report
 ```
@@ -182,11 +204,14 @@ match the target cell:
 ```
 src/robconv/
   cli.py                 robconv parse / stats / convert
+  app.py, gui.py         desktop application (Tkinter) and robconv.exe entry point
+  backup.py, pipeline.py backup / zip / files detection, conversion per task, output folder
   geometry.py            quaternion <-> matrix <-> W,P,R, Offs, RelTool
   rapid/                 lexer, parser, AST, EIO.cfg reader, JSON/pseudo-code output
   convert/               data evaluation, confdata -> CONFIG, RAPID -> TP translation, report
   fanuc/                 TP program model, .LS writer
 tools/                   configuration probes (RobotStudio + ROBOGUIDE)
+packaging/               robconv.exe entry script and release notes (built by .github/workflows/release.yml)
 tests/
   rapid/ convert/ fanuc/ unit, golden, round-trip and private-corpus tests
   fixtures/rapid/        synthetic RAPID sources

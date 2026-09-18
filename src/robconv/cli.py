@@ -2,7 +2,7 @@
 
     robconv parse FILE [--format pseudo|json] [-o OUT]
     robconv stats PATH [PATH ...]
-    robconv convert PATH [PATH ...] -o OUTDIR [--map mapping.json] [--routine NAME ...]
+    robconv convert BACKUP|FILES [-o OUTDIR] [--map mapping.json] [--routine NAME ...]
 
 `stats` parses every RAPID file under the given paths and reports what the V1
 parser recognises versus what it leaves as Unsupported — the tool used to decide
@@ -11,16 +11,15 @@ what to support next on a real controller backup.
 
 import argparse
 import sys
+import zipfile
 from collections import Counter
 from collections.abc import Iterator
 from pathlib import Path
 
-from robconv import __version__
-from robconv.convert import ConversionConfig, build_report, convert
-from robconv.fanuc.ls_writer import write_ls
+from robconv import __version__, pipeline
+from robconv.convert import ConversionConfig
 from robconv.rapid import RAPID_SUFFIXES, parse_file
 from robconv.rapid import nodes as n
-from robconv.rapid.eio import find_eio, read_eio
 from robconv.rapid.to_json import dumps, result_to_data
 from robconv.rapid.to_pseudo import to_pseudo
 from robconv.rapid.walk import module_statements
@@ -51,8 +50,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_stats.set_defaults(handler=_cmd_stats)
 
     p_conv = sub.add_parser("convert", help="convert RAPID routines to FANUC .LS programs")
-    p_conv.add_argument("paths", type=Path, nargs="+", help="RAPID files or folders (all modules share their data)")
-    p_conv.add_argument("-o", "--output", type=Path, required=True, help="output folder")
+    p_conv.add_argument(
+        "paths", type=Path, nargs="+",
+        help="ABB backup (folder or .zip), or RAPID files/folders (all modules share their data)",
+    )  # fmt: skip
+    p_conv.add_argument("-o", "--output", type=Path, help="output folder (default: robconv_<name> next to the input)")
     p_conv.add_argument("--map", type=Path, help="JSON mapping file (registers, I/O, frames...)")
     p_conv.add_argument(
         "--eio", type=Path,
@@ -128,47 +130,15 @@ def _cmd_stats(args: argparse.Namespace) -> int:
 
 
 def _cmd_convert(args: argparse.Namespace) -> int:
-    modules = []
-    sources = []
-    texts: dict[str, str] = {}
-    for path in iter_rapid_files(args.paths):
-        result = parse_file(path)
-        for diag in result.diagnostics:
-            print(f"{path}:{diag}", file=sys.stderr)
-        if not result.ok or result.module is None:
-            print(f"robconv: {path} has syntax errors, fix them before converting", file=sys.stderr)
-            return 1
-        modules.append(result.module)
-        sources.append(path.name)
-        texts[result.module.name] = result.text
-    if not modules:
-        print("robconv: no RAPID file found", file=sys.stderr)
-        return 2
-
     try:
         config = ConversionConfig.from_mapping_file(args.map) if args.map else ConversionConfig()
     except (OSError, ValueError, TypeError) as exc:  # json.JSONDecodeError is a ValueError
         print(f"robconv: invalid mapping file {args.map}: {exc}", file=sys.stderr)
         return 2
-    eio_path = args.eio or find_eio(args.paths)
-    signals = None
-    if eio_path:
-        try:
-            signals = read_eio(eio_path)
-        except OSError as exc:
-            print(f"robconv: cannot read {eio_path}: {exc}", file=sys.stderr)
-            return 2
-        print(f"I/O signal types from {eio_path} ({len(signals)} signals)")
-    result = convert(modules, config, args.routine, texts, signals)
-
-    args.output.mkdir(parents=True, exist_ok=True)
-    for info in result.programs:
-        # newline="" keeps the CRLF produced by the writer, ASCII as on the controller.
-        (args.output / f"{info.program.name}.LS").write_text(write_ls(info.program), encoding="ascii", newline="")
-    report = args.output / "robconv_report.md"
-    report.write_text(build_report(result, config, sources), encoding="utf-8")
-
-    warnings = sum(1 for note in result.notes if note.kind == "WARNING")
-    print(f"{len(result.programs)} programs written to {args.output}")
-    print(f"{result.todo_count} TODO, {warnings} warnings: see {report}")
-    return 0
+    try:
+        output = pipeline.run(args.paths, args.output, config, args.routine, args.eio)
+    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+        print(f"robconv: {exc}", file=sys.stderr)
+        return 2
+    print(f"{output.programs} programs, {output.todo} TODO: see robconv_report.html in each folder")
+    return 1 if any(task.syntax_errors for task in output.tasks) else 0

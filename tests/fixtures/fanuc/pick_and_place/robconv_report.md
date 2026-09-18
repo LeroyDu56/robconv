@@ -1,6 +1,6 @@
 # robconv conversion report
 
-- Generated: 2026-01-01 08:00:00 by robconv 0.1.0
+- Generated: 2026-01-01 08:00:00 by robconv 0.2.0
 - Sources: `pick_and_place.mod`
 - Programs: 3, items to review: 8 TODO, 4 warnings
 
@@ -20,7 +20,7 @@
 
 | RAPID routine | Reason |
 |---|---|
-| PickAndPlace.IsFixtureFull | FUNC routines have no TP program equivalent in V2 |
+| PickAndPlace.IsFixtureFull | FUNC routines have no TP program equivalent |
 
 ## Frames to set up on the controller
 

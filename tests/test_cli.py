@@ -39,9 +39,11 @@ def test_stats(fixtures_dir, capsys):
 def test_convert_writes_ls_files_and_report(fixtures_dir, tmp_path, capsys):
     out = tmp_path / "out"
     assert main(["convert", str(fixtures_dir / "rapid" / "pick_and_place.mod"), "-o", str(out)]) == 0
-    assert sorted(p.name for p in out.iterdir()) == ["MAIN.LS", "PICK.LS", "PLACE.LS", "robconv_report.md"]
+    assert sorted(p.name for p in out.iterdir()) == [
+        "MAIN.LS", "PICK.LS", "PLACE.LS", "robconv_report.html", "robconv_report.md",
+    ]  # fmt: skip
     assert (out / "MAIN.LS").read_bytes().startswith(b"/PROG  MAIN\r\n")
-    assert "3 programs written" in capsys.readouterr().out
+    assert "3 programs, 8 TODO" in capsys.readouterr().out
 
 
 def test_convert_single_routine_with_mapping(fixtures_dir, tmp_path):
